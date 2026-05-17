@@ -142,6 +142,23 @@ export function useSupabaseRoom(roomCode, userProfile) {
         unsubRoom = subscribeToRoom(roomData.id, (newRoom) => {
           setRoom(newRoom);
         });
+
+        // 6. Setup Polling Fallback (in case Realtime is not enabled in Supabase DB)
+        const pollInterval = setInterval(async () => {
+          if (!roomIdRef.current) return;
+          try {
+            const freshRoom = await fetchRoom(roomCode);
+            if (freshRoom) setRoom(freshRoom);
+            
+            const freshQueue = await fetchQueue(roomIdRef.current);
+            setQueueList(freshQueue.map(transformQueueItem));
+          } catch (e) {
+            console.error('Polling error:', e);
+          }
+        }, 3000);
+        
+        // Save pollInterval to clear it on unmount
+        window._djRootsPollInterval = pollInterval;
       } catch (err) {
         console.error('Supabase init error:', err);
       } finally {
@@ -155,6 +172,7 @@ export function useSupabaseRoom(roomCode, userProfile) {
       if (unsubQueue) unsubQueue();
       if (unsubMembers) unsubMembers();
       if (unsubRoom) unsubRoom();
+      if (window._djRootsPollInterval) clearInterval(window._djRootsPollInterval);
     };
   }, [roomCode]);
 
@@ -163,14 +181,6 @@ export function useSupabaseRoom(roomCode, userProfile) {
   const handleVoteSong = useCallback(async (queueItemId, value) => {
     if (!connected || !currentUserId) return;
     await voteSong(queueItemId, currentUserId, value);
-    // Optimistic update
-    setQueueList(prev =>
-      prev.map(item =>
-        item.id === queueItemId
-          ? { ...item, votes: item.votes + value }
-          : item
-      )
-    );
   }, [connected, currentUserId]);
 
   const handleAddSong = useCallback(async (songData) => {
