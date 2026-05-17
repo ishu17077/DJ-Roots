@@ -41,7 +41,6 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
 
     const dlOptions = {
       dumpSingleJson: true,
-      format: 'bestaudio/best',
       quiet: true,
       noWarnings: true,
     };
