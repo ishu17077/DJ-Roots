@@ -91,40 +91,29 @@ export default function DJModeSection({
           </div>
 
 
-          <div className="absolute top-4 right-4 z-20 bg-zinc-950/80 backdrop-blur-md border border-zinc-900 p-3.5 rounded-xl w-48 text-[11px] shadow-xl">
-            <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider mb-2">Gesture Guide</span>
-            <div className="space-y-1.5">
-              {[
-                ['swiperight', '👍 Thumb Up', 'Next'],
-                ['swipeleft', '👎 Thumb Down', 'Prev'],
-                ['fist', '✊ Closed Fist', 'Mute'],
-                ['palmup', '🖐️ Open Palm', 'Vol +'],
-                ['palmdown', '☝️ Pointing Up', 'Vol -'],
-              ].map(([type, label, action]) => (
-                <div key={type} onClick={() => simulateGesture(type)} className="flex items-center justify-between hover:bg-zinc-900/50 p-1.5 rounded cursor-pointer transition-all">
-                  <span className="text-zinc-400">{label}</span>
-                  <span className="bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded text-[8px] font-bold">{action}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+
 
           <div className={`absolute inset-x-0 top-1/2 -translate-y-1/2 bg-violet-600/10 border-y border-violet-500/30 py-4 text-center z-20 pointer-events-none transition-all duration-300 ${hypeModeOn ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
             <span className="hud-font text-white text-xl font-black tracking-widest">HYPE MODE LEVEL MAX</span>
             <p className="text-[9px] text-zinc-300 font-semibold mt-1">Sensors mapped to live virtual audience.</p>
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-col gap-2 bg-zinc-950/70 backdrop-blur-md border border-zinc-900/80 p-3 rounded-xl">
-            <div className="flex items-center justify-between text-[10px] text-zinc-500 px-1">
-              <span className="hud-font uppercase text-violet-400 tracking-wider font-bold">Live Spectrum Analyzer</span>
-              <span className="hud-font">FREQ GAIN: +12dB</span>
-            </div>
-            <div className="flex items-end gap-1 h-8 justify-between w-full">
-              {spectrumHeights.map((ht, idx) => (
-                <div key={idx} className="flex-1 bg-gradient-to-t from-violet-600 via-violet-500 to-emerald-400 rounded-full transition-all duration-300" style={{ height: `${ht}px` }} />
-              ))}
-            </div>
+
+          <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-nowrap items-center justify-center gap-2 sm:gap-4 bg-zinc-950/70 backdrop-blur-md border border-zinc-900/80 p-2.5 rounded-xl text-[9px] sm:text-[10px] overflow-x-auto no-scrollbar">
+            {[
+                ['swiperight', '👍 Thumb Up', 'Next'],
+                ['swipeleft', '👎 Thumb Down', 'Prev'],
+                ['fist', '✊ Closed Fist', 'Mute'],
+                ['palmup', '🖐️ Open Palm', 'Vol +'],
+                ['palmdown', '☝️ Pointing Up', 'Vol -'],
+            ].map(([type, icon, action]) => (
+                <div key={type} onClick={() => simulateGesture(type)} className="flex items-center gap-1 sm:gap-1.5 text-zinc-300 hover:text-white cursor-pointer transition-all hover:bg-white/5 px-1.5 sm:px-2 py-1 rounded shrink-0">
+                  <span className="whitespace-nowrap">{icon}</span>
+                  <span className="bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold uppercase whitespace-nowrap">{action}</span>
+                </div>
+            ))}
           </div>
+
         </div>
 
         <div className="px-4 py-2 bg-zinc-950 border-t border-zinc-900 flex justify-between items-center text-[10px] text-zinc-500">
