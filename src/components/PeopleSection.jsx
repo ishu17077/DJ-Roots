@@ -15,29 +15,23 @@ export default function PeopleSection({
   copyRoomCode = () => {},
   addToast = () => {},
   isPlaying = false,
+  roomCode = '',
+  members = [],
 }) {
   // Local state for PeopleSection
   const [activePeopleTab, setActivePeopleTab] = useState('all'); 
   const [peopleSearchText, setPeopleSearchText] = useState('');
   
-  const [peopleList] = useState([
-    { id: 'p1', name: 'Aarav', username: '@aarav_music', role: 'Host', activity: 'DJing Live', activityType: 'dj', joined: '2 min ago', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80' },
-    { id: 'p2', name: 'Riya', username: '@riya_23', role: 'DJ Next', activity: 'Added 2 songs', activityType: 'added_songs', joined: '3 min ago', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
-    { id: 'p3', name: 'Kabir', username: '@kabir7', role: 'Member', activity: 'Voted', activityType: 'voted', joined: '5 min ago', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
-    { id: 'p4', name: 'Meera', username: '@meera_vibes', role: 'Member', activity: 'Reacted', activityType: 'reacted_fire', joined: '6 min ago', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
-    { id: 'p5', name: 'Rohan', username: '@rohan_18', role: 'Member', activity: 'Added 1 song', activityType: 'added_song', joined: '7 min ago', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' },
-    { id: 'p6', name: 'Ishita', username: '@ishita_here', role: 'Member', activity: 'Voted', activityType: 'voted', joined: '7 min ago', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=80' },
-    { id: 'p7', name: 'Aman', username: '@aman_music', role: 'Member', activity: 'Reacted', activityType: 'reacted_cool', joined: '8 min ago', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80' },
-    { id: 'p8', name: 'Neha', username: '@neha_04', role: 'Member', activity: 'Joined the room', activityType: 'joined', joined: '9 min ago', avatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=80&q=80' }
-  ]);
+  // Use real members data from Supabase
+  const peopleList = members;
 
   const filteredPeople = useMemo(() => {
     return peopleList.filter(person => {
       if (activePeopleTab === 'dj-queue' && person.role !== 'Host' && person.role !== 'DJ Next') return false;
       if (activePeopleTab === 'requests' && person.role !== 'Member') return false; 
       const matchesSearch = person.name.toLowerCase().includes(peopleSearchText.toLowerCase()) || 
-                            person.username.toLowerCase().includes(peopleSearchText.toLowerCase()) ||
-                            person.activity.toLowerCase().includes(peopleSearchText.toLowerCase());
+                            (person.username || '').toLowerCase().includes(peopleSearchText.toLowerCase()) ||
+                            (person.activity || '').toLowerCase().includes(peopleSearchText.toLowerCase());
       return matchesSearch;
     });
   }, [peopleList, activePeopleTab, peopleSearchText]);
@@ -89,7 +83,7 @@ export default function PeopleSection({
                 activePeopleTab === 'dj-queue' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              DJ Queue (3)
+              DJ Queue ({peopleList.filter(p => p.role === 'Host' || p.role === 'DJ Next').length})
               {activePeopleTab === 'dj-queue' && (
                 <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-violet-500 rounded-full" />
               )}
@@ -100,7 +94,7 @@ export default function PeopleSection({
                 activePeopleTab === 'requests' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              Requests (2)
+              Requests ({peopleList.filter(p => p.role === 'Member').length})
               {activePeopleTab === 'requests' && (
                 <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-violet-500 rounded-full" />
               )}
@@ -226,7 +220,7 @@ export default function PeopleSection({
           <p className="text-[10px] text-zinc-400">Share room code with your friends</p>
 
           <div className="flex items-center justify-between bg-zinc-900/50 border border-zinc-800 px-3.5 py-2 rounded-xl">
-            <span className="hud-font text-white font-bold text-xs tracking-wider">ROOTS23</span>
+            <span className="hud-font text-white font-bold text-xs tracking-wider">{roomCode || 'ROOTS23'}</span>
             <button onClick={copyRoomCode} className="p-1.5 rounded-lg bg-violet-600/10 hover:bg-violet-600 border border-violet-500/20 text-violet-400 hover:text-white transition-all">
               <Copy className="w-3.5 h-3.5" />
             </button>

@@ -6,6 +6,8 @@ import HomeSection from './components/HomeSection.jsx';
 import QueueSection from './components/QueueSection.jsx';
 import PeopleSection from './components/PeopleSection.jsx';
 import SettingsSection from './components/SettingsSection.jsx';
+import LobbyScreen from './components/LobbyScreen.jsx';
+import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 
 // --- ZERO-DEPENDENCY FUTURISTIC SVG ICON COMPONENT ---
 // Replaces lucide-react to ensure instant rendering in sandboxes
@@ -314,30 +316,86 @@ const TRENDING_POOL = [
   { id: 't5', title: 'Calm Down', artist: 'Rema', duration: 239, bpm: 107, key: 'B Maj', pitch: 311, img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80' }
 ];
 
-export default function App() {
-  // --- STATE ---
-  const [queueList, setQueueList] = useState([
-    { id: '1', title: 'Die For You', artist: 'The Weeknd', votes: 24, duration: 234, pitch: 220, bpm: 134, key: 'C# Min', addedBy: 'Kabir', img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
-    { id: '2', title: 'Blinding Lights', artist: 'The Weeknd', votes: 18, duration: 200, pitch: 293, bpm: 128, key: 'E Min', addedBy: 'Riya', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
-    { id: '3', title: 'Levitating', artist: 'Dua Lipa', votes: 10, duration: 203, pitch: 330, bpm: 103, key: 'F# Maj', addedBy: 'Meera', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
-    { id: '4', title: 'Heat Waves', artist: 'Glass Animals', votes: -2, duration: 235, pitch: 180, bpm: 81, key: 'B Maj', addedBy: 'Rohan', img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' },
-    { id: '5', title: 'Save Your Tears', artist: 'The Weeknd', votes: -5, duration: 215, pitch: 261, bpm: 118, key: 'G Maj', addedBy: 'Aman', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80' },
-    { id: '6', title: 'Peaches', artist: 'Justin Bieber', votes: -8, duration: 198, pitch: 311, bpm: 90, key: 'C Maj', addedBy: 'Ishita', img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=80' }
-  ]);
+// Hardcoded fallback data for offline mode
+const FALLBACK_QUEUE = [
+  { id: '1', title: 'Die For You', artist: 'The Weeknd', votes: 24, duration: 234, pitch: 220, bpm: 134, key: 'C# Min', addedBy: 'Kabir', img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
+  { id: '2', title: 'Blinding Lights', artist: 'The Weeknd', votes: 18, duration: 200, pitch: 293, bpm: 128, key: 'E Min', addedBy: 'Riya', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
+  { id: '3', title: 'Levitating', artist: 'Dua Lipa', votes: 10, duration: 203, pitch: 330, bpm: 103, key: 'F# Maj', addedBy: 'Meera', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
+  { id: '4', title: 'Heat Waves', artist: 'Glass Animals', votes: -2, duration: 235, pitch: 180, bpm: 81, key: 'B Maj', addedBy: 'Rohan', img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' },
+  { id: '5', title: 'Save Your Tears', artist: 'The Weeknd', votes: -5, duration: 215, pitch: 261, bpm: 118, key: 'G Maj', addedBy: 'Aman', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80' },
+  { id: '6', title: 'Peaches', artist: 'Justin Bieber', votes: -8, duration: 198, pitch: 311, bpm: 90, key: 'C Maj', addedBy: 'Ishita', img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=80' }
+];
 
+export default function App() {
+  // --- LOBBY STATE (restored from localStorage on reload) ---
+  const [activeRoomCode, setActiveRoomCode] = useState(() => {
+    try { return localStorage.getItem('djroots_room_code') || null; } catch { return null; }
+  });
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('djroots_user_profile');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+
+  const handleJoinRoom = (code, profile) => {
+    setActiveRoomCode(code);
+    setUserProfile(profile);
+    // Persist to localStorage so reloads auto-rejoin
+    try {
+      localStorage.setItem('djroots_room_code', code);
+      localStorage.setItem('djroots_user_profile', JSON.stringify(profile));
+    } catch (e) { console.warn('localStorage save failed:', e); }
+  };
+
+  const handleLeaveRoom = () => {
+    setActiveRoomCode(null);
+    setUserProfile(null);
+    try {
+      localStorage.removeItem('djroots_room_code');
+      localStorage.removeItem('djroots_user_profile');
+    } catch (e) { console.warn('localStorage clear failed:', e); }
+  };
+
+  // Show lobby until user creates/joins a room
+  if (!activeRoomCode || !userProfile) {
+    return <LobbyScreen onJoinRoom={handleJoinRoom} />;
+  }
+
+  // Once in a room, render the full dashboard
+  return <DJRootsApp activeRoomCode={activeRoomCode} userProfile={userProfile} onLeaveRoom={handleLeaveRoom} />;
+}
+
+function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
+  // --- SUPABASE BACKEND HOOK ---
+  const {
+    room: supabaseRoom,
+    queueList: supabaseQueue,
+    setQueueList: setSupabaseQueue,
+    members: supabaseMembers,
+    songCatalog,
+    loading: supabaseLoading,
+    connected: supabaseConnected,
+    handleVoteSong: supabaseVote,
+    handleAddSong: supabaseAddSong,
+    handleRemoveSong: supabaseRemoveSong,
+    handleUpdateRoom: supabaseUpdateRoom,
+  } = useSupabaseRoom(activeRoomCode, userProfile);
+
+  // --- STATE ---
   const [activeView, setActiveView] = useState('home');
   const [activeAddTab, setActiveAddTab] = useState('search');
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
-  const [audioElapsedSeconds, setAudioElapsedSeconds] = useState(94); // 1:34 initial offset
+  const [audioElapsedSeconds, setAudioElapsedSeconds] = useState(0);
   const [searchFilterText, setSearchFilterText] = useState('');
   const [webcamActive, setWebcamActive] = useState(false);
   const [hypeModeOn, setHypeModeOn] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const [djTimerSeconds, setDjTimerSeconds] = useState(165); // 02:45 total countdown seconds
+  const [djTimerSeconds, setDjTimerSeconds] = useState(300);
   const [volume, setVolume] = useState(75);
   const [waveformBars, setWaveformBars] = useState(new Array(45).fill(12));
   const [songLinkInput, setSongLinkInput] = useState('');
@@ -352,17 +410,17 @@ export default function App() {
   const interactiveScreenRef = useRef(null);
   const videoRef = useRef(null);
   const webcamStreamRef = useRef(null);
-  
-  // Audio Context Persistency Refs
   const audioCtxRef = useRef(null);
   const masterGainRef = useRef(null);
   const sequencerIntervalRef = useRef(null);
   const playbackIntervalRef = useRef(null);
-
-  // AI Gesture Recognition Refs
   const recognizerRef = useRef(null);
   const requestRef = useRef(null);
   const lastGestureTimeRef = useRef(0);
+
+  // --- Derived queue state (real data from Supabase, empty when no songs) ---
+  const queueList = supabaseQueue;
+  const setQueueList = setSupabaseQueue;
 
   // --- DERIVED MEMO STATES ---
   const currentTrack = useMemo(() => {
@@ -501,6 +559,11 @@ export default function App() {
   };
 
   const voteSong = (id, value) => {
+    // Supabase path
+    if (supabaseConnected) {
+      supabaseVote(id, value);
+    }
+    // Optimistic local update (works for both online + offline)
     setQueueList(prev => prev.map(song => {
       if (song.id === id) {
         const newVotes = song.votes + value;
@@ -512,6 +575,14 @@ export default function App() {
   };
 
   const addSongFromPool = (song) => {
+    // Supabase path — async add
+    if (supabaseConnected) {
+      supabaseAddSong(song);
+      addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
+      return;
+    }
+
+    // Offline fallback
     const existing = queueList.find(q => q.title.toLowerCase() === song.title.toLowerCase());
     if (existing) {
       voteSong(existing.id, 1);
@@ -527,7 +598,7 @@ export default function App() {
       pitch: song.pitch || 260,
       bpm: song.bpm,
       key: song.key,
-      addedBy: 'Aarav',
+      addedBy: userProfile?.name || 'Guest',
       img: song.img,
       userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
     };
@@ -556,7 +627,7 @@ export default function App() {
       pitch: 260,
       bpm: 120,
       key: 'G Min',
-      addedBy: 'Aarav',
+      addedBy: userProfile?.name || 'Guest',
       img: picked.img,
       userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
     };
@@ -596,8 +667,8 @@ export default function App() {
 
   const copyRoomCode = () => {
     if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText('ROOTS26');
-      addToast('Room Code Copied', 'Shared code: "ROOTS26"');
+      navigator.clipboard.writeText(activeRoomCode || 'NONE');
+      addToast('Room Code Copied', `Shared code: "${activeRoomCode}"`);
     }
   };
 
@@ -755,7 +826,7 @@ export default function App() {
       pitch,
       bpm: 120,
       key: 'G Min',
-      addedBy: 'Aarav',
+      addedBy: userProfile?.name || 'Guest',
       img: covers[Math.floor(Math.random() * covers.length)],
       userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
     };
@@ -955,7 +1026,7 @@ export default function App() {
           <div className="flex flex-col">
             <span className="text-[9px] text-zinc-500 font-semibold tracking-wider uppercase">ROOM CODE</span>
             <div className="flex items-center gap-1.5">
-              <span id="room-code-txt" className="hud-font text-emerald-400 text-xs font-bold tracking-widest">ROOTS26</span>
+              <span id="room-code-txt" className="hud-font text-emerald-400 text-xs font-bold tracking-widest">{activeRoomCode || 'OFFLINE'}</span>
               <button onClick={copyRoomCode} className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all">
                 <Copy className="w-3 h-3" />
               </button>
@@ -967,7 +1038,7 @@ export default function App() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </div>
-            <span className="hud-font text-zinc-300 text-xs font-semibold">12 People in Room</span>
+            <span className="hud-font text-zinc-300 text-xs font-semibold">{supabaseMembers.length} People in Room</span>
           </div>
 
           <div className="flex flex-col">
@@ -987,12 +1058,12 @@ export default function App() {
         <div className="flex items-center gap-3">
           <div className="flex flex-col text-right">
             <div className="flex items-center gap-1 justify-end">
-              <span className="text-xs font-bold text-white">Aarav</span>
+              <span className="text-xs font-bold text-white">{userProfile?.name || 'Guest'}</span>
               <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
             </div>
             <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
           </div>
-          <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80" alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
+          <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
         </div>
       </header>
 
@@ -1051,10 +1122,10 @@ export default function App() {
           <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
             <div className="flex items-center gap-2.5">
-              <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80" alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+              <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
               <div>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold text-white">Aarav</span>
+                  <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
                   <Crown className="w-3 h-3 text-amber-400" />
                 </div>
                 <div className="hud-font text-violet-400 text-xs font-bold">
@@ -1071,6 +1142,15 @@ export default function App() {
               </button>
             </div>
           </div>
+
+          {/* Leave Room */}
+          <button 
+            onClick={onLeaveRoom}
+            className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+            Leave Room
+          </button>
         </aside>
 
         {activeView === 'home' ? (
@@ -1185,6 +1265,8 @@ export default function App() {
             copyRoomCode={copyRoomCode}
             addToast={addToast}
             isPlaying={isPlaying}
+            roomCode={activeRoomCode}
+            members={supabaseMembers}
           />
         ) : null}
 
