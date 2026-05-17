@@ -314,20 +314,18 @@ const Info = (p) => <Icon name="Info" {...p} />;
 const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
 
 const TRENDING_POOL = [
-  { id: 't1', title: 'Die For You', artist: 'The Weeknd', duration: 234, bpm: 134, key: 'C# Min', pitch: 220, img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80' },
-  { id: 't2', title: 'Levitating', artist: 'Dua Lipa', duration: 203, bpm: 103, key: 'F# Maj', pitch: 330, img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80' },
-  { id: 't3', title: 'Flowers', artist: 'Miley Cyrus', duration: 200, bpm: 118, key: 'A Min', pitch: 261, img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80' },
-  { id: 't4', title: 'Calm Down', artist: 'Rema', duration: 239, bpm: 107, key: 'B Maj', pitch: 311, img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80' },
-  { id: 't5', title: 'Save Your Tears', artist: 'The Weeknd', duration: 215, bpm: 118, key: 'G Maj', pitch: 261, img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80' }
+  { id: 't1', title: 'Bella Ciao', artist: 'Money Heist', duration: 143, bpm: 120, key: 'A Min', pitch: 220, source: 'youtube', youtubeVideoId: '0aUav1lx3rA', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg' },
+  { id: 't2', title: 'Bekhayali', artist: 'Sachet Tandon', duration: 371, bpm: 120, key: 'E Min', pitch: 240, source: 'youtube', youtubeVideoId: 'VOLKJJvfAbg', img: 'https://img.youtube.com/vi/VOLKJJvfAbg/mqdefault.jpg' },
+  { id: 't3', title: 'Rasputin', artist: 'Boney M', duration: 283, bpm: 126, key: 'B Min', pitch: 250, source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg' },
+  { id: 't4', title: 'Sahiba', artist: 'Aditya Rikhari', duration: 180, bpm: 110, key: 'C Min', pitch: 230, source: 'youtube', youtubeVideoId: 'n2dVFdqMYGA', img: 'https://img.youtube.com/vi/n2dVFdqMYGA/mqdefault.jpg' }
 ];
 
 // Hardcoded fallback data for offline mode
 const FALLBACK_QUEUE = [
-  { id: '1', title: 'Die For You', artist: 'The Weeknd', votes: 24, duration: 234, pitch: 220, bpm: 134, key: 'C# Min', addedBy: 'Kabir', img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
-  { id: '2', title: 'Levitating', artist: 'Dua Lipa', votes: 10, duration: 203, pitch: 330, bpm: 103, key: 'F# Maj', addedBy: 'Meera', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
-  { id: '3', title: 'Flowers', artist: 'Miley Cyrus', votes: 8, duration: 200, pitch: 261, bpm: 118, key: 'A Min', addedBy: 'Riya', img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
-  { id: '4', title: 'Calm Down', artist: 'Rema', votes: -2, duration: 239, pitch: 311, bpm: 107, key: 'B Maj', addedBy: 'Rohan', img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' },
-  { id: '5', title: 'Save Your Tears', artist: 'The Weeknd', votes: -5, duration: 215, pitch: 261, bpm: 118, key: 'G Maj', addedBy: 'Aman', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80' }
+  { id: '1', title: 'Bella Ciao', artist: 'Money Heist', votes: 24, duration: 143, pitch: 220, bpm: 120, key: 'A Min', source: 'youtube', youtubeVideoId: '0aUav1lx3rA', addedBy: 'Kabir', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
+  { id: '2', title: 'Bekhayali', artist: 'Sachet Tandon', votes: 10, duration: 371, pitch: 240, bpm: 120, key: 'E Min', source: 'youtube', youtubeVideoId: 'VOLKJJvfAbg', addedBy: 'Meera', img: 'https://img.youtube.com/vi/VOLKJJvfAbg/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
+  { id: '3', title: 'Rasputin', artist: 'Boney M', votes: 8, duration: 283, pitch: 250, bpm: 126, key: 'B Min', source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', addedBy: 'Riya', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
+  { id: '4', title: 'Sahiba', artist: 'Aditya Rikhari', votes: 4, duration: 180, pitch: 230, bpm: 110, key: 'C Min', source: 'youtube', youtubeVideoId: 'n2dVFdqMYGA', addedBy: 'Rohan', img: 'https://img.youtube.com/vi/n2dVFdqMYGA/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' }
 ];
 
 export default function App() {
@@ -487,7 +485,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // --- STATE ---
   const [activeView, setActiveView] = useState('home');
   const [activeAddTab, setActiveAddTab] = useState('search');
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
   const [localIsPlaying, setLocalIsPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
@@ -528,10 +526,6 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // Track the user's local votes: { [song_id]: 1 | -1 }
   const [userVotes, setUserVotes] = useState({});
 
-  // Is the current user the HOST of the active room?
-  const isHost = !activeRoomCode || !supabaseRoom
-    ? true   // offline mode — full control
-    : (userProfile?.id === supabaseRoom?.host_id);
 
   const [offlineQueue, setOfflineQueue] = useState(() => FALLBACK_QUEUE);
 
@@ -543,10 +537,11 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
 
   const currentTrack = useMemo(() => {
+    const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: '', userAvatar: '' };
     if (activeRoomCode && supabaseRoom) {
-      return queueList.find(t => t.id === supabaseRoom.current_track_id) || queueList[0] || { title: 'Unknown', artist: 'Unknown', duration: 180, pitch: 220, bpm: 120, key: 'G Min', img: '', userAvatar: '' };
+      return queueList.find(t => t.id === supabaseRoom.current_track_id) || fallback;
     }
-    return queueList[currentTrackIndex] || { title: 'Unknown', artist: 'Unknown', duration: 180, pitch: 220, bpm: 120, key: 'G Min', img: '', userAvatar: '' };
+    return queueList[currentTrackIndex] || fallback;
   }, [queueList, activeRoomCode, supabaseRoom, currentTrackIndex]);
 
   const isPlaying = activeRoomCode && supabaseRoom ? supabaseRoom.is_playing : localIsPlaying;
@@ -637,7 +632,16 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         addToast('Permission Denied', 'Only the DJ can control playback.', false);
         return;
       }
+      if (!supabaseRoom.current_track_id && queueList.length > 0) {
+        supabaseUpdateRoom({ current_track_id: queueList[0].id, is_playing: true });
+        return;
+      }
       supabaseUpdateRoom({ is_playing: !supabaseRoom.is_playing });
+      return;
+    }
+    if (currentTrackIndex === -1 && queueList.length > 0) {
+      setCurrentTrackIndex(0);
+      setLocalIsPlaying(true);
       return;
     }
     setLocalIsPlaying(prev => !prev);
