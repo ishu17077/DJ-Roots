@@ -8,6 +8,7 @@ import {
   Video,
   VideoOff,
 } from './icons.jsx';
+import YouTubePlayer from './YouTubePlayer.jsx';
 
 export default function DJModeSection({
   interactiveScreenRef,
@@ -75,19 +76,37 @@ export default function DJModeSection({
           />
 
           <div className={`absolute inset-0 flex flex-col items-center justify-center text-center transition-opacity duration-300 ${webcamActive ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.06)_0%,transparent_65%)]"></div>
-            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#1e1e2f 1px, transparent 1px), linear-gradient(90deg, #1e1e2f 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-            <div className="relative z-10">
-              <div className="w-40 h-40 rounded-full bg-zinc-900/60 border-2 border-violet-500/30 relative flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-2xl transition-transform duration-500">
-                <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=450&q=80" alt="Room bg" className="absolute inset-0 w-full h-full object-cover opacity-35" />
-                <div className="absolute inset-0 bg-gradient-to-t from-violet-950/70 via-transparent to-transparent"></div>
-                <div className="w-12 h-12 rounded-full bg-violet-500/20 flex items-center justify-center border border-violet-500/40 relative z-10">
-                  <Headphones className="w-6 h-6 text-white" />
+            {currentTrack?.source === 'youtube' && currentTrack?.youtubeVideoId ? (
+              <div className="relative z-10 w-full h-full flex items-center justify-center p-6">
+                <div className="w-full max-w-2xl">
+                  <YouTubePlayer
+                    videoId={currentTrack.youtubeVideoId}
+                    embedUrl={currentTrack.embedUrl}
+                    title={currentTrack.title}
+                    autoplay={true}
+                    muted={false}
+                    controls={true}
+                    showInfo={true}
+                  />
                 </div>
               </div>
-              <h3 className="text-sm font-bold tracking-widest text-zinc-300 uppercase">Gesture Space Virtual Room</h3>
-              <p className="text-[10px] text-zinc-500 mt-1 max-w-sm mx-auto">Click and drag across this dark canvas to generate expanding neon ripple chords.</p>
-            </div>
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.06)_0%,transparent_65%)]"></div>
+                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#1e1e2f 1px, transparent 1px), linear-gradient(90deg, #1e1e2f 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+                <div className="relative z-10">
+                  <div className="w-40 h-40 rounded-full bg-zinc-900/60 border-2 border-violet-500/30 relative flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-2xl transition-transform duration-500">
+                    <img src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=450&q=80" alt="Room bg" className="absolute inset-0 w-full h-full object-cover opacity-35" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-violet-950/70 via-transparent to-transparent"></div>
+                    <div className="w-12 h-12 rounded-full bg-violet-500/20 flex items-center justify-center border border-violet-500/40 relative z-10">
+                      <Headphones className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-bold tracking-widest text-zinc-300 uppercase">Gesture Space Virtual Room</h3>
+                  <p className="text-[10px] text-zinc-500 mt-1 max-w-sm mx-auto">Click and drag across this dark canvas to generate expanding neon ripple chords.</p>
+                </div>
+              </>
+            )}
           </div>
 
 
@@ -101,16 +120,16 @@ export default function DJModeSection({
 
           <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-nowrap items-center justify-center gap-2 sm:gap-4 bg-zinc-950/70 backdrop-blur-md border border-zinc-900/80 p-2.5 rounded-xl text-[9px] sm:text-[10px] overflow-x-auto no-scrollbar">
             {[
-                ['swiperight', '👍 Thumb Up', 'Next'],
-                ['swipeleft', '👎 Thumb Down', 'Prev'],
-                ['fist', '✊ Closed Fist', 'Mute'],
-                ['palmup', '🖐️ Open Palm', 'Vol +'],
-                ['palmdown', '☝️ Pointing Up', 'Vol -'],
+              ['swiperight', '👍 Thumb Up', 'Next'],
+              ['swipeleft', '👎 Thumb Down', 'Prev'],
+              ['fist', '✊ Closed Fist', 'Mute'],
+              ['palmup', '🖐️ Open Palm', 'Vol +'],
+              ['palmdown', '☝️ Pointing Up', 'Vol -'],
             ].map(([type, icon, action]) => (
-                <div key={type} onClick={() => simulateGesture(type)} className="flex items-center gap-1 sm:gap-1.5 text-zinc-300 hover:text-white cursor-pointer transition-all hover:bg-white/5 px-1.5 sm:px-2 py-1 rounded shrink-0">
-                  <span className="whitespace-nowrap">{icon}</span>
-                  <span className="bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold uppercase whitespace-nowrap">{action}</span>
-                </div>
+              <div key={type} onClick={() => simulateGesture(type)} className="flex items-center gap-1 sm:gap-1.5 text-zinc-300 hover:text-white cursor-pointer transition-all hover:bg-white/5 px-1.5 sm:px-2 py-1 rounded shrink-0">
+                <span className="whitespace-nowrap">{icon}</span>
+                <span className="bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold uppercase whitespace-nowrap">{action}</span>
+              </div>
             ))}
           </div>
 
