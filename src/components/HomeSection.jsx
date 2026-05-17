@@ -17,7 +17,9 @@ export default function HomeSection({
     isPlaying,
     activeRoomCode,
     onJoinRoom,
-    authDisplayName
+    authDisplayName,
+    onTimeUpdate = () => {},
+    onRegisterSeek = () => {},
 }) {
     const [streamError, setStreamError] = useState(null);
 
@@ -50,6 +52,8 @@ export default function HomeSection({
                                     duration={currentTrack.duration}
                                     isPlaying={isPlaying}
                                     showControls={true}
+                                    onTimeUpdate={onTimeUpdate}
+                                    onRegisterSeek={onRegisterSeek}
                                 />
                             </div>
                         ) : (
