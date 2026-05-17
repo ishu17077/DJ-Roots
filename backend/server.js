@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 const youtubeDl = require('youtube-dl-exec').create(process.env.YOUTUBE_DL_BINARY || 'yt-dlp');
 const https = require('https');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 dotenv.config();
 
@@ -37,13 +39,21 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     console.log(`\uD83C\uDFB5 Extracting stream for: ${videoId}`);
 
-    // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
-    const info = await youtubeDl(youtubeUrl, {
+    const dlOptions = {
       dumpSingleJson: true,
       format: 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
       quiet: true,
       noWarnings: true,
-    });
+    };
+
+    // Use cookies if the file exists to bypass YouTube bot detection
+    const cookiesPath = process.env.YOUTUBE_COOKIES_PATH || path.join(__dirname, 'cookies.txt');
+    if (fs.existsSync(cookiesPath)) {
+      dlOptions.cookies = cookiesPath;
+    }
+
+    // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
+    const info = await youtubeDl(youtubeUrl, dlOptions);
 
     const streamUrl = info?.url;
     if (!streamUrl) {
