@@ -41,6 +41,8 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
 
     const dlOptions = {
       dumpSingleJson: true,
+      format: 'bestaudio/best',
+      extractorArgs: 'youtube:player_client=android_vr,tv_embedded,default',
       quiet: true,
       noWarnings: true,
     };
@@ -48,6 +50,7 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
     // Use cookies if the file exists to bypass YouTube bot detection
     // Render mounts Secret Files in Docker at /etc/secrets/
 
+    /*
     let cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
     if (!cookiesPath && fs.existsSync('/etc/secrets/cookies.txt')) {
       cookiesPath = '/etc/secrets/cookies.txt';
@@ -69,6 +72,7 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
         dlOptions.cookies = cookiesPath;
       }
     }
+    */
 
 
     // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
