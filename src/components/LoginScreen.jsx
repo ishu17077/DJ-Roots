@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase.js';
+import ParticleAirpods from './ParticleAirpods';
 
 export default function LoginScreen({ onAuthSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
@@ -169,37 +170,31 @@ export default function LoginScreen({ onAuthSuccess }) {
   };
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center overflow-hidden bg-[#030307] text-[#e4e4e7] relative">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.1)_0%,transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(217,70,239,0.07)_0%,transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(59,130,246,0.05)_0%,transparent_50%)]"></div>
-      <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(#1e1e2f 1px, transparent 1px), linear-gradient(90deg, #1e1e2f 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+    <div className="h-screen w-screen flex overflow-hidden bg-[#030108] text-[#e4e4e7] relative">
 
-      {/* Animated floating orbs */}
-      <div className="absolute top-1/4 left-1/5 w-80 h-80 rounded-full bg-violet-600/6 blur-[140px]" style={{ animation: 'orbFloat 8s ease-in-out infinite' }}></div>
-      <div className="absolute bottom-1/3 right-1/4 w-72 h-72 rounded-full bg-fuchsia-600/5 blur-[120px]" style={{ animation: 'orbFloat 10s ease-in-out infinite 2s' }}></div>
-      <div className="absolute top-1/2 right-1/3 w-56 h-56 rounded-full bg-blue-600/4 blur-[100px]" style={{ animation: 'orbFloat 12s ease-in-out infinite 4s' }}></div>
-
-      <div className="relative z-10 w-full max-w-md px-6">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-purple-600 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.4)] relative overflow-hidden">
-              <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:300%_300%]" style={{ animation: 'shimmer 3s ease-in-out infinite' }}></div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-white relative z-10">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
-            </div>
-            <div className="text-left">
-              <h1 className="text-3xl font-black text-white tracking-tight">DJ ROOTS</h1>
-              <p className="text-[10px] text-violet-400 font-bold tracking-[0.25em] uppercase">Crowd Vibes · You Control</p>
-            </div>
-          </div>
+      {/* ── TOP-LEFT HEADER: DJ ROOTS logo (same as landing page) ── */}
+      <header className="absolute top-0 left-0 w-full p-6 lg:p-10 flex items-center gap-4 z-50 pointer-events-none">
+        <div className="flex items-center gap-[3px] text-pink-500 h-8">
+          <div className="w-[3px] h-3 bg-current rounded-full"></div>
+          <div className="w-[3px] h-5 bg-current rounded-full"></div>
+          <div className="w-[3px] h-7 bg-current rounded-full"></div>
+          <div className="w-[3px] h-4 bg-current rounded-full"></div>
+          <div className="w-[3px] h-2 bg-current rounded-full"></div>
         </div>
+        <div className="flex flex-col">
+          <span className="text-[1.1rem] font-bold tracking-widest leading-none mb-1 text-white">DJ ROOTS</span>
+          <span className="text-[0.65rem] text-gray-400 tracking-wider">Crowd Vibes. You Control.</span>
+        </div>
+      </header>
+
+      {/* ── LEFT PANEL: Login Form ── */}
+      <div className="relative z-10 w-full md:w-[45%] lg:w-[40%] flex flex-col items-center justify-center pt-24 pb-6 px-8 lg:px-16 bg-[#030108]">
+        {/* subtle left-panel glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(139,92,246,0.08)_0%,transparent_60%)] pointer-events-none"></div>
+        <div className="relative z-10 w-full max-w-sm">
 
         {/* Auth Card */}
-        <div className="bg-zinc-950/70 backdrop-blur-2xl border border-zinc-800/80 rounded-3xl p-8 shadow-[0_0_80px_rgba(0,0,0,0.6),0_0_40px_rgba(139,92,246,0.05)]">
+        <div className="bg-zinc-950/70 backdrop-blur-2xl border border-zinc-800/80 rounded-3xl p-6 shadow-[0_0_80px_rgba(0,0,0,0.6),0_0_40px_rgba(139,92,246,0.05)]">
 
           {/* Tab Switcher */}
           <div className="flex bg-zinc-900/80 rounded-xl p-1 mb-7 border border-zinc-800/50">
@@ -227,7 +222,7 @@ export default function LoginScreen({ onAuthSuccess }) {
 
           {/* Login Form */}
           {mode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-2">Email Address</label>
                 <div className="relative">
@@ -328,7 +323,7 @@ export default function LoginScreen({ onAuthSuccess }) {
 
           {/* Signup Form */}
           {mode === 'signup' && (
-            <form onSubmit={handleSignup} className="space-y-5">
+            <form onSubmit={handleSignup} className="space-y-3">
               <div>
                 <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-2">Display Name</label>
                 <div className="relative">
@@ -347,6 +342,9 @@ export default function LoginScreen({ onAuthSuccess }) {
                     className="w-full bg-[#08080f] border border-zinc-800 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:border-violet-500/60 focus:shadow-[0_0_15px_rgba(139,92,246,0.1)] placeholder-zinc-600 transition-all"
                   />
                 </div>
+                {error && error.toLowerCase().includes('name') && (
+                  <p className="text-[10px] text-red-400 mt-1 ml-1">{error}</p>
+                )}
               </div>
 
               <div>
@@ -367,6 +365,9 @@ export default function LoginScreen({ onAuthSuccess }) {
                     className="w-full bg-[#08080f] border border-zinc-800 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:border-violet-500/60 focus:shadow-[0_0_15px_rgba(139,92,246,0.1)] placeholder-zinc-600 transition-all"
                   />
                 </div>
+                {error && (error.toLowerCase().includes('email') || error.toLowerCase().includes('account')) && (
+                  <p className="text-[10px] text-red-400 mt-1 ml-1">{error}</p>
+                )}
               </div>
 
               <div>
@@ -402,16 +403,14 @@ export default function LoginScreen({ onAuthSuccess }) {
                     )}
                   </button>
                 </div>
-                <p className="text-[10px] text-zinc-600 mt-1.5 ml-1">Minimum 6 characters</p>
+                <p className="text-[10px] text-zinc-600 mt-1 ml-1">Minimum 6 characters</p>
+                {error && error.toLowerCase().includes('password') && (
+                  <p className="text-[10px] text-red-400 mt-0.5 ml-1">{error}</p>
+                )}
               </div>
 
-              {error && (
-                <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-xl">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  {error}
-                </div>
+              {error && !error.toLowerCase().includes('name') && !error.toLowerCase().includes('email') && !error.toLowerCase().includes('account') && !error.toLowerCase().includes('password') && (
+                <p className="text-[10px] text-red-400 -mt-1 ml-1">{error}</p>
               )}
 
               <button
@@ -455,6 +454,14 @@ export default function LoginScreen({ onAuthSuccess }) {
         <p className="text-center text-[10px] text-zinc-600 mt-6 tracking-wider">
           Built with ❤️ by DJ Roots · Real-time powered by Supabase
         </p>
+        </div>{/* end inner max-w-sm */}
+      </div>{/* end LEFT PANEL */}
+
+      {/* ── RIGHT PANEL: AirPods Particle Animation ── */}
+      <div className="hidden md:flex flex-1 items-center justify-center relative bg-[#030108] overflow-hidden">
+        {/* Subtle ambient glow behind AirPods */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-tr from-[#9333ea]/10 to-[#ec4899]/10 rounded-full blur-[120px] pointer-events-none"></div>
+        <ParticleAirpods />
       </div>
 
       {/* Keyframe animations */}
