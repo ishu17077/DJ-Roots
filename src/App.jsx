@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { FilesetResolver, GestureRecognizer } from '@mediapipe/tasks-vision';
 import AddSongSection from './components/AddSongSection.jsx';
 import DJModeSection from './components/DJModeSection.jsx';
@@ -7,7 +7,10 @@ import QueueSection from './components/QueueSection.jsx';
 import PeopleSection from './components/PeopleSection.jsx';
 import SettingsSection from './components/SettingsSection.jsx';
 import LobbyScreen from './components/LobbyScreen.jsx';
+import LoginScreen from './components/LoginScreen.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
+import { supabase } from './lib/supabase.js';
+import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
 
 // --- ZERO-DEPENDENCY FUTURISTIC SVG ICON COMPONENT ---
 // Replaces lucide-react to ensure instant rendering in sandboxes
@@ -327,7 +330,72 @@ const FALLBACK_QUEUE = [
 ];
 
 export default function App() {
-  // --- LOBBY STATE (restored from localStorage on reload) ---
+  // --- AUTH STATE (persisted to localStorage for refresh survival) ---
+  const [authUser, setAuthUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('djroots_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [authChecking, setAuthChecking] = useState(true);
+
+  // Check existing Supabase session on mount, but also respect localStorage fallback
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setAuthUser(session.user);
+        try { localStorage.setItem('djroots_auth_user', JSON.stringify(session.user)); } catch {}
+      }
+      setAuthChecking(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setAuthUser(session.user);
+        try { localStorage.setItem('djroots_auth_user', JSON.stringify(session.user)); } catch {}
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthSuccess = useCallback((user) => {
+    setAuthUser(user);
+    try { localStorage.setItem('djroots_auth_user', JSON.stringify(user)); } catch {}
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setAuthUser(null);
+    try {
+      localStorage.removeItem('djroots_auth_user');
+      localStorage.removeItem('djroots_room_code');
+      localStorage.removeItem('djroots_user_profile');
+    } catch (e) { console.warn('localStorage clear failed:', e); }
+  }, []);
+
+  // Show loading spinner while checking auth (only if no cached user)
+  if (authChecking && !authUser) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#030307]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-3 border-violet-500/30 border-t-violet-500 rounded-full animate-spin"></div>
+          <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Must be authenticated — show login
+  if (!authUser) {
+    return <LoginScreen onAuthSuccess={handleAuthSuccess} />;
+  }
+
+  // Go straight to the dashboard — room join/create is handled inside
+  const authDisplayName = authUser.user_metadata?.display_name || authUser.email?.split('@')[0] || 'Guest';
+  return <DJRootsApp authUser={authUser} authDisplayName={authDisplayName} onLogout={handleLogout} />;
+}
+
+function DJRootsApp({ authUser, authDisplayName, onLogout }) {
+  // --- ROOM STATE (persisted to localStorage) ---
   const [activeRoomCode, setActiveRoomCode] = useState(() => {
     try { return localStorage.getItem('djroots_room_code') || null; } catch { return null; }
   });
@@ -341,11 +409,43 @@ export default function App() {
   const handleJoinRoom = (code, profile) => {
     setActiveRoomCode(code);
     setUserProfile(profile);
-    // Persist to localStorage so reloads auto-rejoin
+    setConnectMode(null); // Close widget upon success
     try {
       localStorage.setItem('djroots_room_code', code);
       localStorage.setItem('djroots_user_profile', JSON.stringify(profile));
     } catch (e) { console.warn('localStorage save failed:', e); }
+  };
+
+  // --- OFFLINE ROOM CONNECT STATE ---
+  const [connectMode, setConnectMode] = useState(null); // null | 'create' | 'join'
+  const [connectName, setConnectName] = useState(authDisplayName || '');
+  const [connectRoomCode, setConnectRoomCode] = useState('');
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [connectError, setConnectError] = useState('');
+
+  const executeCreateRoom = async (e) => {
+    e.preventDefault();
+    if (!connectName.trim()) { setConnectError('Please enter your name'); return; }
+    setConnectLoading(true); setConnectError('');
+    try {
+      const result = await createRoom(connectName.trim());
+      if (result) handleJoinRoom(result.room.code, result.profile);
+      else setConnectError('Failed to create room.');
+    } catch (err) { setConnectError('Connection error.'); } 
+    finally { setConnectLoading(false); }
+  };
+
+  const executeJoinRoom = async (e) => {
+    e.preventDefault();
+    if (!connectName.trim()) { setConnectError('Please enter your name'); return; }
+    if (!connectRoomCode.trim()) { setConnectError('Please enter a room code'); return; }
+    setConnectLoading(true); setConnectError('');
+    try {
+      const result = await joinRoomByCode(connectRoomCode.trim(), connectName.trim());
+      if (result) handleJoinRoom(result.room.code, result.profile);
+      else setConnectError('Room not found.');
+    } catch (err) { setConnectError('Connection error.'); } 
+    finally { setConnectLoading(false); }
   };
 
   const handleLeaveRoom = () => {
@@ -357,16 +457,6 @@ export default function App() {
     } catch (e) { console.warn('localStorage clear failed:', e); }
   };
 
-  // Show lobby until user creates/joins a room
-  if (!activeRoomCode || !userProfile) {
-    return <LobbyScreen onJoinRoom={handleJoinRoom} />;
-  }
-
-  // Once in a room, render the full dashboard
-  return <DJRootsApp activeRoomCode={activeRoomCode} userProfile={userProfile} onLeaveRoom={handleLeaveRoom} />;
-}
-
-function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
   // --- SUPABASE BACKEND HOOK ---
   const {
     room: supabaseRoom,
@@ -418,9 +508,11 @@ function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
   const requestRef = useRef(null);
   const lastGestureTimeRef = useRef(0);
 
-  // --- Derived queue state (real data from Supabase, empty when no songs) ---
-  const queueList = supabaseQueue;
-  const setQueueList = setSupabaseQueue;
+  const [offlineQueue, setOfflineQueue] = useState(() => [TRENDING_POOL[0], TRENDING_POOL[1]]);
+
+  // --- Derived queue state (real data from Supabase, or local offline fallback) ---
+  const queueList = activeRoomCode ? supabaseQueue : offlineQueue;
+  const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
   // --- DERIVED MEMO STATES ---
   const currentTrack = useMemo(() => {
@@ -1055,15 +1147,25 @@ function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col text-right">
-            <div className="flex items-center gap-1 justify-end">
-              <span className="text-xs font-bold text-white">{userProfile?.name || 'Guest'}</span>
-              <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors border border-zinc-800/50 hover:border-zinc-700 bg-zinc-900/30 px-2.5 py-1.5 rounded-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
+          </button>
+          
+          <div className="flex items-center gap-3 border-l border-zinc-800 pl-4">
+            <div className="flex flex-col text-right">
+              <div className="flex items-center gap-1 justify-end">
+                <span className="text-xs font-bold text-white">{userProfile?.name || authDisplayName}</span>
+                <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+              </div>
+              <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
             </div>
-            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
+            <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
           </div>
-          <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
         </div>
       </header>
 
@@ -1091,7 +1193,7 @@ function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
                 </span>
                 <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
               </button>
-              <button onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+              <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
                 <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
               </button>
               <button onClick={() => { setActiveView('settings'); addToast('Settings', 'Opening room properties.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'settings' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
@@ -1116,41 +1218,75 @@ function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
                 </div>
               </div>
             </div>
+
+            {/* Offline Connect Widget (Sidebar) */}
+            {!activeRoomCode && (
+              <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4">
+                {!connectMode ? (
+                  <div className="space-y-2">
+                    <button onClick={() => setConnectMode('join')} className="w-full bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-500/20 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all">
+                      Join Room
+                    </button>
+                    <button onClick={() => setConnectMode('create')} className="w-full bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 py-2 rounded-lg text-zinc-300 text-[10px] font-bold uppercase tracking-wider transition-all">
+                      Create Room
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={connectMode === 'create' ? executeCreateRoom : executeJoinRoom} className="flex flex-col gap-2">
+                    <input type="text" value={connectName} onChange={e => setConnectName(e.target.value)} placeholder="DJ Name" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full" />
+                    {connectMode === 'join' && (
+                      <input type="text" value={connectRoomCode} onChange={e => setConnectRoomCode(e.target.value.toUpperCase())} placeholder="Code" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full uppercase" />
+                    )}
+                    {connectError && <div className="text-[9px] text-red-400">{connectError}</div>}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setConnectMode(null)} className="flex-1 text-[9px] text-zinc-500 hover:text-white uppercase font-bold tracking-wider">Back</button>
+                      <button type="submit" disabled={connectLoading} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider disabled:opacity-50">
+                        {connectMode === 'join' ? 'Join' : 'Start'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Current DJ Summary */}
-          <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
-            <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
-            <div className="flex items-center gap-2.5">
-              <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
-              <div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
-                  <Crown className="w-3 h-3 text-amber-400" />
-                </div>
-                <div className="hud-font text-violet-400 text-xs font-bold">
-                  {formatTime(djTimerSeconds)} <span className="text-[9px] text-zinc-500">Left</span>
+          {/* Current DJ Summary - Only show if activeRoomCode exists */}
+          {activeRoomCode && (
+            <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
+              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
+              <div className="flex items-center gap-2.5">
+                <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                <div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
+                    <Crown className="w-3 h-3 text-amber-400" />
+                  </div>
+                  <div className="hud-font text-violet-400 text-xs font-bold">
+                    {formatTime(djTimerSeconds)} <span className="text-[9px] text-zinc-500">Left</span>
+                  </div>
                 </div>
               </div>
+              <div className="flex gap-1">
+                <button onClick={extendDJTime} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                  Extend
+                </button>
+                <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                  Change
+                </button>
+              </div>
             </div>
-            <div className="flex gap-1">
-              <button onClick={extendDJTime} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                Extend
-              </button>
-              <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                Change
-              </button>
-            </div>
-          </div>
+          )}
 
-          {/* Leave Room */}
-          <button 
-            onClick={onLeaveRoom}
-            className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-            Leave Room
-          </button>
+          {/* Leave Room - Only show if activeRoomCode exists */}
+          {activeRoomCode && (
+            <button 
+              onClick={handleLeaveRoom}
+              className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+              Leave Room
+            </button>
+          )}
         </aside>
 
         {activeView === 'home' ? (
@@ -1179,6 +1315,9 @@ function DJRootsApp({ activeRoomCode, userProfile, onLeaveRoom }) {
             copyRoomCode={copyRoomCode}
             djTimerSeconds={djTimerSeconds}
             setActiveView={setActiveView}
+            activeRoomCode={activeRoomCode}
+            onJoinRoom={handleJoinRoom}
+            authDisplayName={authDisplayName}
           />
         ) : null}
 

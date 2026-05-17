@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { createRoom, joinRoomByCode } from '../lib/supabaseService.js';
 
-export default function LobbyScreen({ onJoinRoom }) {
+export default function LobbyScreen({ onJoinRoom, onLogout, authUser, defaultName = '' }) {
   const [mode, setMode] = useState(null); // null | 'create' | 'join'
-  const [name, setName] = useState('');
+  const [name, setName] = useState(defaultName);
   const [roomCode, setRoomCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +59,25 @@ export default function LobbyScreen({ onJoinRoom }) {
       {/* Floating orbs */}
       <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-violet-600/5 blur-[120px] animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-fuchsia-600/5 blur-[100px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+      {/* Logged-in user badge + logout */}
+      {authUser && (
+        <div className="absolute top-5 right-5 z-20 flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/60 rounded-full px-4 py-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]"></div>
+            <span className="text-[11px] text-zinc-400 font-medium">{authUser.email}</span>
+          </div>
+          <button
+            onClick={onLogout}
+            className="bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/60 hover:border-red-500/30 rounded-full p-2.5 text-zinc-500 hover:text-red-400 transition-all"
+            title="Log out"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       <div className="relative z-10 w-full max-w-md px-6">
         {/* Logo */}

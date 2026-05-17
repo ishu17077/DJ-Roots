@@ -11,15 +11,21 @@ export default function HomeSection({
   audioElapsedSeconds,
   formatTime,
   waveformBars,
-  isPlaying
+  isPlaying,
+  activeRoomCode,
+  onJoinRoom,
+  authDisplayName
 }) {
+
+
+
   return (
     <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative rounded-3xl border border-zinc-800/50 shadow-2xl">
       {/* Full blur background matching the image */}
       <div className="absolute inset-0 bg-zinc-950 z-0" />
       <div 
           className="absolute inset-0 opacity-40 blur-[100px] saturate-200 transition-all duration-1000 mix-blend-screen scale-110"
-          style={{ backgroundImage: `url(${currentTrack.img})`, backgroundPosition: 'center', backgroundSize: 'cover' }}
+          style={{ backgroundImage: `url(${currentTrack?.img || ''})`, backgroundPosition: 'center', backgroundSize: 'cover' }}
       />
       
       <section className="relative z-10 flex flex-col p-6 lg:p-10 h-full">
@@ -136,6 +142,7 @@ export default function HomeSection({
                          )
                      })}
                  </div>
+
                  
               </div>
           </div>

@@ -78,8 +78,18 @@ export async function createRoom(hostName) {
   return { room, profile };
 }
 
-/** Find existing profile by name or create a new one */
-export async function getOrCreateProfile(name) {
+/** Find existing profile by auth_id or name, or create a new one */
+export async function getOrCreateProfile(name, authId = null) {
+  // First try to find by auth_id (Supabase Auth linked profile)
+  if (authId) {
+    const { data: authLinked } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (authLinked) return authLinked;
+  }
+
   const username = `@${name.toLowerCase().replace(/\s+/g, '_')}_${Math.floor(Math.random() * 1000)}`;
 
   // Try to find an existing profile with this exact name
@@ -102,9 +112,12 @@ export async function getOrCreateProfile(name) {
   ];
   const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
 
+  const insertData = { name, username, avatar_url: randomAvatar };
+  if (authId) insertData.auth_id = authId;
+
   const { data: newProfile, error } = await supabase
     .from('profiles')
-    .insert({ name, username, avatar_url: randomAvatar })
+    .insert(insertData)
     .select()
     .single();
 
