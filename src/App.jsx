@@ -314,21 +314,20 @@ const Info = (p) => <Icon name="Info" {...p} />;
 const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
 
 const TRENDING_POOL = [
-  { id: 't1', title: 'Blinding Lights', artist: 'The Weeknd', duration: 201, bpm: 120, key: 'F Min', pitch: 293, img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80' },
-  { id: 't2', title: 'Die For You', artist: 'The Weeknd', duration: 234, bpm: 134, key: 'C# Min', pitch: 220, img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&q=80' },
-  { id: 't3', title: 'Levitating', artist: 'Dua Lipa', duration: 203, bpm: 103, key: 'F# Maj', pitch: 330, img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80' },
-  { id: 't4', title: 'Flowers', artist: 'Miley Cyrus', duration: 200, bpm: 118, key: 'A Min', pitch: 261, img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80' },
-  { id: 't5', title: 'Calm Down', artist: 'Rema', duration: 239, bpm: 107, key: 'B Maj', pitch: 311, img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80' }
+  { id: 't1', title: 'Die For You', artist: 'The Weeknd', duration: 234, bpm: 134, key: 'C# Min', pitch: 220, img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80' },
+  { id: 't2', title: 'Levitating', artist: 'Dua Lipa', duration: 203, bpm: 103, key: 'F# Maj', pitch: 330, img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80' },
+  { id: 't3', title: 'Flowers', artist: 'Miley Cyrus', duration: 200, bpm: 118, key: 'A Min', pitch: 261, img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80' },
+  { id: 't4', title: 'Calm Down', artist: 'Rema', duration: 239, bpm: 107, key: 'B Maj', pitch: 311, img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80' },
+  { id: 't5', title: 'Save Your Tears', artist: 'The Weeknd', duration: 215, bpm: 118, key: 'G Maj', pitch: 261, img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80' }
 ];
 
 // Hardcoded fallback data for offline mode
 const FALLBACK_QUEUE = [
   { id: '1', title: 'Die For You', artist: 'The Weeknd', votes: 24, duration: 234, pitch: 220, bpm: 134, key: 'C# Min', addedBy: 'Kabir', img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
-  { id: '2', title: 'Blinding Lights', artist: 'The Weeknd', votes: 18, duration: 200, pitch: 293, bpm: 128, key: 'E Min', addedBy: 'Riya', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
-  { id: '3', title: 'Levitating', artist: 'Dua Lipa', votes: 10, duration: 203, pitch: 330, bpm: 103, key: 'F# Maj', addedBy: 'Meera', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
-  { id: '4', title: 'Heat Waves', artist: 'Glass Animals', votes: -2, duration: 235, pitch: 180, bpm: 81, key: 'B Maj', addedBy: 'Rohan', img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' },
-  { id: '5', title: 'Save Your Tears', artist: 'The Weeknd', votes: -5, duration: 215, pitch: 261, bpm: 118, key: 'G Maj', addedBy: 'Aman', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80' },
-  { id: '6', title: 'Peaches', artist: 'Justin Bieber', votes: -8, duration: 198, pitch: 311, bpm: 90, key: 'C Maj', addedBy: 'Ishita', img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=80' }
+  { id: '2', title: 'Levitating', artist: 'Dua Lipa', votes: 10, duration: 203, pitch: 330, bpm: 103, key: 'F# Maj', addedBy: 'Meera', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
+  { id: '3', title: 'Flowers', artist: 'Miley Cyrus', votes: 8, duration: 200, pitch: 261, bpm: 118, key: 'A Min', addedBy: 'Riya', img: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
+  { id: '4', title: 'Calm Down', artist: 'Rema', votes: -2, duration: 239, pitch: 311, bpm: 107, key: 'B Maj', addedBy: 'Rohan', img: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' },
+  { id: '5', title: 'Save Your Tears', artist: 'The Weeknd', votes: -5, duration: 215, pitch: 261, bpm: 118, key: 'G Maj', addedBy: 'Aman', img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&q=80', userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80' }
 ];
 
 export default function App() {
@@ -534,7 +533,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     ? true   // offline mode — full control
     : (userProfile?.id === supabaseRoom?.host_id);
 
-  const [offlineQueue, setOfflineQueue] = useState(() => [TRENDING_POOL[0], TRENDING_POOL[1]]);
+  const [offlineQueue, setOfflineQueue] = useState(() => FALLBACK_QUEUE);
 
   // --- Derived queue state (real data from Supabase, or local offline fallback) ---
   const queueList = activeRoomCode ? supabaseQueue : offlineQueue;
@@ -932,7 +931,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             delegate: "GPU"
           },
           runningMode: "VIDEO",
-          numHands: 1
+          numHands: 2
         });
         recognizerRef.current = recognizer;
         console.log("AI Gesture Recognizer Armed.");
@@ -943,37 +942,38 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     initRecognizer();
   }, []);
 
+  // Ref keeps simulateGesture fresh inside the rAF loop (avoids stale closure)
+  const simulateGestureRef = useRef(null);
+
   // --- AI GESTURE PREDICTION LOOP ---
   useEffect(() => {
     if (webcamActive && videoRef.current) {
       const predictWebcam = () => {
-        if (!videoRef.current || !recognizerRef.current) return;
-
+        if (!videoRef.current || !recognizerRef.current) {
+          requestRef.current = requestAnimationFrame(predictWebcam);
+          return;
+        }
         if (videoRef.current.readyState >= 2) {
           const nowInMs = Date.now();
-          const results = recognizerRef.current.recognizeForVideo(videoRef.current, nowInMs);
+          let results;
+          try { results = recognizerRef.current.recognizeForVideo(videoRef.current, nowInMs); }
+          catch (e) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
 
           if (results.gestures.length > 0) {
             const gestureName = results.gestures[0][0].categoryName;
             const score = results.gestures[0][0].score;
-
-            if (score > 0.6 && nowInMs - lastGestureTimeRef.current > 1500) {
-              if (gestureName === 'Closed_Fist') {
-                simulateGesture('fist');
-                lastGestureTimeRef.current = nowInMs;
-              } else if (gestureName === 'Open_Palm') {
-                simulateGesture('palmup');
-                lastGestureTimeRef.current = nowInMs;
-              } else if (gestureName === 'Thumb_Up') {
-                simulateGesture('swiperight');
-                lastGestureTimeRef.current = nowInMs;
-              } else if (gestureName === 'Thumb_Down') {
-                simulateGesture('swipeleft');
-                lastGestureTimeRef.current = nowInMs;
-              } else if (gestureName === 'Pointing_Up') {
-                simulateGesture('palmdown');
-                lastGestureTimeRef.current = nowInMs;
-              }
+            const COOLDOWN = 1200; // ms between gestures
+            if (score > 0.72 && nowInMs - lastGestureTimeRef.current > COOLDOWN) {
+              lastGestureTimeRef.current = nowInMs;
+              const fn = simulateGestureRef.current;
+              if (!fn) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
+              if (gestureName === 'Thumb_Up')    fn('swiperight');
+              else if (gestureName === 'Thumb_Down')  fn('swipeleft');
+              else if (gestureName === 'Closed_Fist') fn('fist');
+              else if (gestureName === 'Open_Palm')   fn('palmup');
+              else if (gestureName === 'Pointing_Up') fn('palmdown');
+              else if (gestureName === 'Victory')     fn('swiperight');
+              else if (gestureName === 'ILoveYou')    fn('palmup');
             }
           }
         }
@@ -981,38 +981,40 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       };
       requestRef.current = requestAnimationFrame(predictWebcam);
     } else {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-      }
-    }
-    return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
+    }
+    return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
   }, [webcamActive]);
 
   // --- GESTURE SIMULATIONS ---
   const simulateGesture = (type) => {
     initAudioEngine();
-    addToast('Gesture Captured', `AI HUD detected tracking signature: ${type.toUpperCase()}`);
+    const GESTURE_LABELS = { swiperight: '👍 Next Track', swipeleft: '👎 Prev Track', fist: '✊ Play/Pause', palmup: '🖐 Volume Up', palmdown: '☝ Volume Down' };
+    addToast('Gesture', GESTURE_LABELS[type] || type.toUpperCase());
 
-    if (type === 'swiperight') {
-      nextTrack();
-    } else if (type === 'swipeleft') {
-      prevTrack();
-    } else if (type === 'fist') {
-      togglePlayback();
-    } else if (type === 'palmup') {
-      if (masterGainRef.current && audioCtxRef.current) {
-        const currentVol = masterGainRef.current.gain.value;
-        masterGainRef.current.gain.setValueAtTime(Math.min(1.0, currentVol + 0.1), audioCtxRef.current.currentTime);
-      }
+    if (type === 'swiperight') { nextTrack(); }
+    else if (type === 'swipeleft') { prevTrack(); }
+    else if (type === 'fist') { togglePlayback(); }
+    else if (type === 'palmup') {
+      setVolume(prev => {
+        const next = Math.min(100, prev + 10);
+        if (masterGainRef.current && audioCtxRef.current)
+          masterGainRef.current.gain.setValueAtTime(next / 200, audioCtxRef.current.currentTime);
+        if (youtubeVolumeRef.current) youtubeVolumeRef.current(next / 100);
+        return next;
+      });
     } else if (type === 'palmdown') {
-      if (masterGainRef.current && audioCtxRef.current) {
-        const currentVol = masterGainRef.current.gain.value;
-        masterGainRef.current.gain.setValueAtTime(Math.max(0.05, currentVol - 0.1), audioCtxRef.current.currentTime);
-      }
+      setVolume(prev => {
+        const next = Math.max(0, prev - 10);
+        if (masterGainRef.current && audioCtxRef.current)
+          masterGainRef.current.gain.setValueAtTime(next / 200, audioCtxRef.current.currentTime);
+        if (youtubeVolumeRef.current) youtubeVolumeRef.current(next / 100);
+        return next;
+      });
     }
   };
+  // Keep the ref fresh on every render so the rAF loop always calls the latest version
+  simulateGestureRef.current = simulateGesture;
 
   // --- SUBMIT ADD SONG MODAL ---
   const handleAddTrackSubmit = (e) => {
@@ -1276,38 +1278,30 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           </div>
         </div>
 
-        {/* Room Stats */}
-        <div className="hidden md:flex items-center gap-6">
-          <div className="flex flex-col">
-            <span className="text-[9px] text-zinc-500 font-semibold tracking-wider uppercase">ROOM CODE</span>
-            <div className="flex items-center gap-1.5">
-              <span id="room-code-txt" className="hud-font text-emerald-400 text-xs font-bold tracking-widest">{activeRoomCode || 'OFFLINE'}</span>
-              <button onClick={copyRoomCode} className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all">
-                <Copy className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 bg-zinc-900/40 px-3 py-1 rounded-xl border border-zinc-800/60">
-            <div className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </div>
-            <span className="hud-font text-zinc-300 text-xs font-semibold">{supabaseMembers.length} People in Room</span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-[9px] text-zinc-500 font-semibold tracking-wider uppercase mb-0.5">VIBE METER</span>
-            <div className="flex items-center gap-1.5">
-              <span className="hud-font text-violet-400 text-xs font-bold uppercase tracking-wider">{hypeModeOn ? 'OVERDRIVE' : 'HIGH'}</span>
-              <div className="flex items-end gap-0.5 h-3">
-                <div className="w-1 bg-violet-500 h-1.5 rounded-full"></div>
-                <div className={`w-1 bg-violet-500 h-2.5 rounded-full ${isPlaying ? 'animate-bounce' : ''}`}></div>
-                <div className="w-1 bg-violet-500 h-2 rounded-full"></div>
-                <div className={`w-1 bg-violet-500 h-3 rounded-full ${isPlaying ? 'animate-bounce delay-75' : ''}`}></div>
+        {/* Room Stats — only shown when in a room */}
+        <div className="hidden md:flex items-center gap-5">
+          {activeRoomCode ? (
+            <>
+              <div className="flex flex-col">
+                <span className="text-[9px] text-zinc-500 font-semibold tracking-wider uppercase">ROOM CODE</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="hud-font text-emerald-400 text-xs font-bold tracking-widest">{activeRoomCode}</span>
+                  <button onClick={copyRoomCode} className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="flex items-center gap-2 bg-zinc-900/40 px-3 py-1 rounded-xl border border-zinc-800/60">
+                <div className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </div>
+                <span className="hud-font text-zinc-300 text-xs font-semibold">{supabaseMembers.length} in Room</span>
+              </div>
+            </>
+          ) : (
+            <span className="text-[10px] text-zinc-600 font-semibold italic">No active room — Join or Create one</span>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -1364,9 +1358,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                 <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
                   <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
                 </button>
-                <button onClick={() => { setActiveView('settings'); addToast('Settings', 'Opening room properties.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'settings' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <Settings className={`w-4 h-4 ${activeView === 'settings' ? 'text-violet-400' : ''}`} /> Settings
-                </button>
+
               </nav>
 
               {/* Thin Hype Mode Card */}
@@ -1552,7 +1544,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               voteSong={voteSong}
               searchFilterText={searchFilterText}
               setSearchFilterText={setSearchFilterText}
-              setShowAddModal={setShowAddModal}
+              setActiveView={setActiveView}
               queueList={queueList}
               toggleShuffle={toggleShuffle}
             />
@@ -1576,8 +1568,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               skipUpvotes={skipUpvotes}
               skipDownvotes={skipDownvotes}
               skipThreshold={skipThreshold}
-              setShowAddModal={setShowAddModal}
+              setActiveView={setActiveView}
               toggleShuffle={toggleShuffle}
+              activeRoomCode={activeRoomCode}
+              isHost={isHost}
             />
           ) : null
         }
@@ -1600,11 +1594,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           ) : null
         }
 
-        {
-          activeView === 'settings' ? (
-            <SettingsSection />
-          ) : null
-        }
+
 
       </div >
 
