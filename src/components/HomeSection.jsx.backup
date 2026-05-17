@@ -45,6 +45,7 @@ export default function HomeSection({
         }
     }, [currentTrack?.youtubeVideoId, currentTrack?.source]);
 
+
     return (
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative rounded-3xl border border-zinc-800/50 shadow-2xl">
             {/* Full blur background matching the image */}
@@ -79,17 +80,18 @@ export default function HomeSection({
                 {/* Content split */}
                 <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10">
 
-                    {/* Left Side: YouTube Audio Player or Vinyl */}
+                    {/* Left Side: YouTube Player or Vinyl */}
                     <div className="w-full lg:w-1/2 flex items-center justify-center relative h-full min-h-0 shrink-1">
                         {currentTrack?.source === 'youtube' && currentTrack?.youtubeVideoId ? (
-                            <div className="w-full px-6 max-w-lg">
-                                <YouTubeAudioPlayer
+                            <div className="w-full px-6">
+                                <YouTubePlayer
                                     videoId={currentTrack.youtubeVideoId}
+                                    embedUrl={currentTrack.embedUrl}
                                     title={currentTrack.title}
-                                    streamUrl={streamUrl}
-                                    duration={currentTrack.duration}
-                                    isPlaying={isPlaying}
-                                    showControls={true}
+                                    autoplay={isPlaying}
+                                    muted={false}
+                                    controls={true}
+                                    showInfo={true}
                                 />
                             </div>
                         ) : (
