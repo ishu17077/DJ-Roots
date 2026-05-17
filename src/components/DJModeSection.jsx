@@ -27,7 +27,7 @@ export default function DJModeSection({
   voteSong,
   searchFilterText,
   setSearchFilterText,
-  setShowAddModal,
+  setActiveView,
   queueList,
   toggleShuffle,
 }) {
@@ -131,7 +131,7 @@ export default function DJModeSection({
             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Playlist Deck</span>
             <h3 className="text-xs font-extrabold text-white mt-0.5">Song Queue</h3>
           </div>
-          <button onClick={() => setShowAddModal(true)} className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+          <button onClick={() => setActiveView('add-song')} className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all">
             <Plus className="w-3.5 h-3.5" /> Add Song
           </button>
         </div>
