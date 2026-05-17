@@ -489,7 +489,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [activeView, setActiveView] = useState('home');
   const [activeAddTab, setActiveAddTab] = useState('search');
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [localIsPlaying, setLocalIsPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [audioElapsedSeconds, setAudioElapsedSeconds] = useState(0);
@@ -534,9 +534,16 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
   // --- DERIVED MEMO STATES ---
+  const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
+
   const currentTrack = useMemo(() => {
+    if (activeRoomCode && supabaseRoom) {
+      return queueList.find(t => t.id === supabaseRoom.current_track_id) || queueList[0] || { title: 'Unknown', artist: 'Unknown', duration: 180, pitch: 220, bpm: 120, key: 'G Min', img: '', userAvatar: '' };
+    }
     return queueList[currentTrackIndex] || { title: 'Unknown', artist: 'Unknown', duration: 180, pitch: 220, bpm: 120, key: 'G Min', img: '', userAvatar: '' };
-  }, [queueList, currentTrackIndex]);
+  }, [queueList, activeRoomCode, supabaseRoom, currentTrackIndex]);
+
+  const isPlaying = activeRoomCode && supabaseRoom ? supabaseRoom.is_playing : localIsPlaying;
 
   const sortedAndFilteredQueue = useMemo(() => {
     const sorted = [...queueList].sort((a, b) => b.votes - a.votes);
@@ -617,7 +624,15 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // --- TIMERS & CONTROLLERS ---
   const togglePlayback = () => {
     initAudioEngine();
-    setIsPlaying(prev => !prev);
+    if (activeRoomCode && supabaseRoom) {
+      if (!isHost) {
+        addToast('Permission Denied', 'Only the DJ can control playback.', false);
+        return;
+      }
+      supabaseUpdateRoom({ is_playing: !supabaseRoom.is_playing });
+      return;
+    }
+    setLocalIsPlaying(prev => !prev);
   };
 
   const showHomeView = () => {
@@ -644,27 +659,46 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   const selectTrack = (id) => {
+    if (activeRoomCode && supabaseRoom) {
+      if (!isHost) {
+        addToast('Permission Denied', 'Only the DJ can change tracks.', false);
+        return;
+      }
+      supabaseUpdateRoom({ current_track_id: id, is_playing: true });
+      setAudioElapsedSeconds(0);
+      const targetIdx = queueList.findIndex(t => t.id === id);
+      if (targetIdx !== -1) {
+        addToast('Track Changed', `Selected: ${queueList[targetIdx].title}`);
+      }
+      return;
+    }
+
     const targetIdx = queueList.findIndex(t => t.id === id);
     if (targetIdx !== -1) {
       setCurrentTrackIndex(targetIdx);
       setAudioElapsedSeconds(0);
       addToast('Track Changed', `Selected: ${queueList[targetIdx].title}`);
+      setLocalIsPlaying(true);
     }
   };
 
   const prevTrack = () => {
-    let target = currentTrackIndex - 1;
+    if (activeRoomCode && supabaseRoom && !isHost) return;
+    const currentIdx = queueList.findIndex(t => t.id === currentTrack.id);
+    let target = currentIdx - 1;
     if (target < 0) target = queueList.length - 1;
     selectTrack(queueList[target].id);
   };
 
   const nextTrack = () => {
+    if (activeRoomCode && supabaseRoom && !isHost) return;
+    const currentIdx = queueList.findIndex(t => t.id === currentTrack.id);
     if (isShuffle) {
       const target = Math.floor(Math.random() * queueList.length);
       selectTrack(queueList[target].id);
       return;
     }
-    let target = currentTrackIndex + 1;
+    let target = currentIdx + 1;
     if (target >= queueList.length) target = 0;
     selectTrack(queueList[target].id);
   };
@@ -685,7 +719,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
     // Supabase path
     if (supabaseConnected) {
-      supabaseVote(id, delta);
+      supabaseVote(id, value);
     }
     // Optimistic local update (works for both online + offline)
     setQueueList(prev => prev.map(song => {
@@ -702,6 +736,25 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     // Supabase path — async add
     if (supabaseConnected) {
       supabaseAddSong(song);
+      const existing = queueList.find(q => q.title.toLowerCase() === song.title.toLowerCase());
+      if (existing) {
+        voteSong(existing.id, 1);
+        return;
+      }
+      const newSong = {
+        id: Date.now().toString(),
+        title: song.title,
+        artist: song.artist,
+        votes: 1,
+        duration: song.duration,
+        pitch: song.pitch || 260,
+        bpm: song.bpm,
+        key: song.key,
+        addedBy: userProfile?.name || 'Guest',
+        img: song.img,
+        userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
+      };
+      setQueueList(prev => [...prev, newSong]);
       addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
       return;
     }
@@ -750,6 +803,14 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
       if (supabaseConnected) {
         supabaseAddSong(song);
+        const existing = queueList.find(q => q.youtubeVideoId && q.youtubeVideoId === song.youtubeVideoId);
+        if (existing) {
+          voteSong(existing.id, 1);
+          addToast('Already Queued', `"${song.title}" vote increased.`);
+          setSongLinkInput('');
+          return;
+        }
+        setQueueList(prev => [...prev, song]);
       } else {
         const existing = queueList.find(q => q.youtubeVideoId && q.youtubeVideoId === song.youtubeVideoId);
         if (existing) {
@@ -967,6 +1028,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
     };
 
+    if (supabaseConnected) {
+      supabaseAddSong(newSong);
+    }
+    
     setQueueList(prev => [...prev, newSong]);
     setShowAddModal(false);
     addToast('Track Appended', `"${title}" has been added to the queue list.`);
@@ -1005,6 +1070,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   // --- COMPONENT LIFECYCLE EFFECTS ---
+
+  useEffect(() => {
+    setAudioElapsedSeconds(0);
+  }, [currentTrack.id]);
 
   // Handle Playback Progress & DJ Timer Countdown
   useEffect(() => {
@@ -1245,12 +1314,14 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                 <button onClick={showAddSongView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'add-song' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
                   <PlusCircle className={`w-4 h-4 ${activeView === 'add-song' ? 'text-violet-400' : ''}`} /> Add Song
                 </button>
-                <button onClick={showDjModeView} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <span className="flex items-center gap-3">
-                    <Activity className={`w-4 h-4 ${activeView === 'dj' ? 'text-violet-400' : ''}`} /> DJ Mode
-                  </span>
-                  <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
-                </button>
+                {isHost && (
+                  <button onClick={showDjModeView} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                    <span className="flex items-center gap-3">
+                      <Activity className={`w-4 h-4 ${activeView === 'dj' ? 'text-violet-400' : ''}`} /> DJ Mode
+                    </span>
+                    <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
+                  </button>
+                )}
                 <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
                   <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
                 </button>
@@ -1514,33 +1585,40 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
         {/* Center Timeline Playback sliders */}
         <div className="flex flex-col items-center gap-2 w-full md:max-w-[450px]">
-          <div className="flex items-center gap-4.5">
-            <button onClick={toggleShuffle} className={`p-1 transition-all ${isShuffle ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
-              <Shuffle className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={prevTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
-              <SkipBack className="w-4 h-4" />
-            </button>
-            <button
-              onClick={togglePlayback}
-              className={`p-3 rounded-full transition-all active:scale-95 shadow-md flex items-center justify-center ${isPlaying ? 'bg-emerald-500 text-black shadow-emerald-500/10' : 'bg-violet-600 text-white shadow-violet-600/10'}`}
-            >
-              {isPlaying ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
-            </button>
-            <button onClick={nextTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
-              <SkipForward className="w-4 h-4" />
-            </button>
-            <button onClick={toggleRepeat} className={`p-1 transition-all ${isRepeat ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
-              <Repeat className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {isHost ? (
+            <div className="flex items-center gap-4.5">
+              <button onClick={toggleShuffle} className={`p-1 transition-all ${isShuffle ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
+                <Shuffle className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={prevTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
+                <SkipBack className="w-4 h-4" />
+              </button>
+              <button
+                onClick={togglePlayback}
+                className={`p-3 rounded-full transition-all active:scale-95 shadow-md flex items-center justify-center ${isPlaying ? 'bg-emerald-500 text-black shadow-emerald-500/10' : 'bg-violet-600 text-white shadow-violet-600/10'}`}
+              >
+                {isPlaying ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
+              </button>
+              <button onClick={nextTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
+                <SkipForward className="w-4 h-4" />
+              </button>
+              <button onClick={toggleRepeat} className={`p-1 transition-all ${isRepeat ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
+                <Repeat className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest bg-violet-500/10 px-4 py-2 rounded-full border border-violet-500/20">
+              <Activity className="w-4 h-4 animate-pulse" />
+              <span>Listening to DJ</span>
+            </div>
+          )}
 
           {/* Custom Track progress bar */}
           <div className="flex items-center gap-3 w-full text-[10px]">
             <span className="hud-font text-zinc-500">{formatTime(audioElapsedSeconds)}</span>
             <div
-              onClick={seekTimeline}
-              className="flex-1 h-1 bg-zinc-900 rounded-full cursor-pointer relative border border-zinc-800/40"
+              onClick={isHost ? seekTimeline : undefined}
+              className={`flex-1 h-1 bg-zinc-900 rounded-full ${isHost ? 'cursor-pointer' : 'cursor-default'} relative border border-zinc-800/40`}
             >
               <div
                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-600 to-emerald-500 rounded-full"
