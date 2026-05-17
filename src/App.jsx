@@ -11,6 +11,8 @@ import LoginScreen from './components/LoginScreen.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 import { supabase } from './lib/supabase.js';
 import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
+import { extractYoutubeVideoId, getYoutubeThumbnail, isYoutubeUrl } from './lib/youtubeUtils.js';
+import { getYoutubeVideoInfo } from './lib/youtubeMetadata.js';
 
 // --- ZERO-DEPENDENCY FUTURISTIC SVG ICON COMPONENT ---
 // Replaces lucide-react to ensure instant rendering in sandboxes
@@ -344,14 +346,14 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setAuthUser(session.user);
-        try { localStorage.setItem('djroots_auth_user', JSON.stringify(session.user)); } catch {}
+        try { localStorage.setItem('djroots_auth_user', JSON.stringify(session.user)); } catch { }
       }
       setAuthChecking(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setAuthUser(session.user);
-        try { localStorage.setItem('djroots_auth_user', JSON.stringify(session.user)); } catch {}
+        try { localStorage.setItem('djroots_auth_user', JSON.stringify(session.user)); } catch { }
       }
     });
     return () => subscription.unsubscribe();
@@ -359,7 +361,7 @@ export default function App() {
 
   const handleAuthSuccess = useCallback((user) => {
     setAuthUser(user);
-    try { localStorage.setItem('djroots_auth_user', JSON.stringify(user)); } catch {}
+    try { localStorage.setItem('djroots_auth_user', JSON.stringify(user)); } catch { }
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -431,7 +433,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       const result = await createRoom(connectName.trim());
       if (result) handleJoinRoom(result.room.code, result.profile);
       else setConnectError('Failed to create room.');
-    } catch (err) { setConnectError('Connection error.'); } 
+    } catch (err) { setConnectError('Connection error.'); }
     finally { setConnectLoading(false); }
   };
 
@@ -444,7 +446,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       const result = await joinRoomByCode(connectRoomCode.trim(), connectName.trim());
       if (result) handleJoinRoom(result.room.code, result.profile);
       else setConnectError('Room not found.');
-    } catch (err) { setConnectError('Connection error.'); } 
+    } catch (err) { setConnectError('Connection error.'); }
     finally { setConnectLoading(false); }
   };
 
@@ -489,6 +491,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [volume, setVolume] = useState(75);
   const [waveformBars, setWaveformBars] = useState(new Array(45).fill(12));
   const [songLinkInput, setSongLinkInput] = useState('');
+  const [isLoadingYutubeUrl, setIsLoadingYutubeUrl] = useState(false);
   const [skipUpvotes, setSkipUpvotes] = useState(8);
   const [skipDownvotes, setSkipDownvotes] = useState(3);
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
@@ -524,8 +527,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   const sortedAndFilteredQueue = useMemo(() => {
     const sorted = [...queueList].sort((a, b) => b.votes - a.votes);
-    return sorted.filter(song => 
-      song.title.toLowerCase().includes(searchFilterText.toLowerCase()) || 
+    return sorted.filter(song =>
+      song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
     );
   }, [queueList, searchFilterText]);
@@ -556,12 +559,12 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     if (!audioCtxRef.current) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return;
-      
+
       const ctx = new AudioContextClass();
       const gainNode = ctx.createGain();
       gainNode.gain.setValueAtTime(volume / 200, ctx.currentTime);
       gainNode.connect(ctx.destination);
-      
+
       audioCtxRef.current = ctx;
       masterGainRef.current = gainNode;
     }
@@ -663,7 +666,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     // Calculate the actual vote delta (e.g., changing from -1 to 1 means delta is +2)
     const prevVote = userVotes[id] || 0;
     const delta = value - prevVote;
-    
+
     // Track locally
     setUserVotes(prev => ({ ...prev, [id]: value }));
 
@@ -715,34 +718,80 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
   };
 
-  const handleAddTrackByUrl = (e) => {
+  const handleAddTrackByUrl = async (e) => {
     e.preventDefault();
     if (!songLinkInput.trim()) return;
 
-    const mockSongs = [
-      { title: 'Starboy', artist: 'The Weeknd', img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80' },
-      { title: 'Flowers', artist: 'Miley Cyrus', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&q=80' },
-      { title: 'Cruel Summer', artist: 'Taylor Swift', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80' },
-    ];
-    const picked = mockSongs[Math.floor(Math.random() * mockSongs.length)];
+    const input = songLinkInput.trim();
+    setIsLoadingYutubeUrl(true);
 
-    const newSong = {
-      id: Date.now().toString(),
-      title: picked.title,
-      artist: picked.artist,
-      votes: 1,
-      duration: 210,
-      pitch: 260,
-      bpm: 120,
-      key: 'G Min',
-      addedBy: userProfile?.name || 'Guest',
-      img: picked.img,
-      userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
-    };
+    try {
+      if (isYoutubeUrl(input)) {
+        // Extract video ID from YouTube URL
+        const videoId = extractYoutubeVideoId(input);
+        
+        if (!videoId) {
+          addToast('Invalid URL', 'Could not extract video ID from YouTube URL.');
+          setIsLoadingYutubeUrl(false);
+          return;
+        }
 
-    setQueueList(prev => [...prev, newSong]);
-    setSongLinkInput('');
-    addToast('Added via URL', `Link verified. Queued: "${newSong.title}".`);
+        // Fetch metadata from YouTube
+        const metadata = await getYoutubeVideoInfo(videoId);
+        const thumbnailUrl = getYoutubeThumbnail(videoId);
+
+        const newSong = {
+          id: Date.now().toString(),
+          title: metadata.title,
+          artist: metadata.artist,
+          votes: 1,
+          duration: metadata.duration || 180,
+          pitch: 260,
+          bpm: 120,
+          key: 'Unknown',
+          addedBy: userProfile?.name || 'Guest',
+          img: thumbnailUrl,
+          userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80',
+          source: 'youtube',
+          videoId: videoId
+        };
+
+        setQueueList(prev => [...prev, newSong]);
+        setSongLinkInput('');
+        addToast('YouTube Track Added', `"${newSong.title}" by ${newSong.artist} queued!`);
+      } else {
+        // Fallback for non-YouTube URLs
+        const mockSongs = [
+          { title: 'Starboy', artist: 'The Weeknd', img: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=120&q=80' },
+          { title: 'Flowers', artist: 'Miley Cyrus', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&q=80' },
+          { title: 'Cruel Summer', artist: 'Taylor Swift', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&q=80' },
+        ];
+        const picked = mockSongs[Math.floor(Math.random() * mockSongs.length)];
+
+        const newSong = {
+          id: Date.now().toString(),
+          title: picked.title,
+          artist: picked.artist,
+          votes: 1,
+          duration: 210,
+          pitch: 260,
+          bpm: 120,
+          key: 'G Min',
+          addedBy: userProfile?.name || 'Guest',
+          img: picked.img,
+          userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
+        };
+
+        setQueueList(prev => [...prev, newSong]);
+        setSongLinkInput('');
+        addToast('Added via URL', `Link verified. Queued: "${newSong.title}".`);
+      }
+    } catch (error) {
+      console.error('Error processing URL:', error);
+      addToast('Error', 'Failed to process the URL. Please try again.');
+    } finally {
+      setIsLoadingYutubeUrl(false);
+    }
   };
 
   const toggleShuffle = () => {
@@ -845,15 +894,15 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     if (webcamActive && videoRef.current) {
       const predictWebcam = () => {
         if (!videoRef.current || !recognizerRef.current) return;
-        
+
         if (videoRef.current.readyState >= 2) {
           const nowInMs = Date.now();
           const results = recognizerRef.current.recognizeForVideo(videoRef.current, nowInMs);
-          
+
           if (results.gestures.length > 0) {
             const gestureName = results.gestures[0][0].categoryName;
             const score = results.gestures[0][0].score;
-            
+
             if (score > 0.6 && nowInMs - lastGestureTimeRef.current > 1500) {
               if (gestureName === 'Closed_Fist') {
                 simulateGesture('fist');
@@ -985,7 +1034,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             return 0;
           }
         });
-        
+
         setDjTimerSeconds(prev => {
           if (prev > 0) return prev - 1;
           return 0;
@@ -1013,7 +1062,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         const scale = [1, 1.2, 1.5, 1.75, 2.0];
         const notePitch = basePitch * scale[Math.floor(Math.random() * scale.length)];
         triggerOscillatorTone(notePitch, 0.4, 'sine');
-        
+
         // Spike spectrum bars occasionally
         setSpectrumHeights(prev => prev.map(h => Math.random() < 0.3 ? 32 : h));
       }, 500);
@@ -1033,7 +1082,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // Handle Spectrum dynamic bounce loop
   useEffect(() => {
     const interval = setInterval(() => {
-      setSpectrumHeights(prev => 
+      setSpectrumHeights(prev =>
         prev.map(() => isPlaying ? Math.floor(Math.random() * 28) + 4 : 4)
       );
     }, 120);
@@ -1066,7 +1115,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     if (webcamActive && videoRef.current && webcamStreamRef.current) {
       if (videoRef.current.srcObject !== webcamStreamRef.current) {
         videoRef.current.srcObject = webcamStreamRef.current;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     }
   });
@@ -1083,7 +1132,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       {/* EXPLICIT STYLE INJECTIONS TO PREVENT UNSTYLED PREVIEWS */}
       <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         body {
           background-color: #030307 !important;
           color: #e4e4e7 !important;
@@ -1164,14 +1214,14 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={onLogout}
             className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors border border-zinc-800/50 hover:border-zinc-700 bg-zinc-900/30 px-2.5 py-1.5 rounded-lg"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
             <span className="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
           </button>
-          
+
           <div className="flex items-center gap-3 border-l border-zinc-800 pl-4">
             <div className="flex flex-col text-right">
               <div className="flex items-center gap-1 justify-end">
@@ -1187,84 +1237,84 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
       {/* CORE WORKSPACE WRAPPER */}
       <div className="flex-1 flex flex-row gap-4 p-4 min-h-0 w-full overflow-hidden">
-        
+
         {/* SLEEK LEFT SIDEBAR */}
         <aside className="w-60 bg-zinc-950/40 backdrop-blur-xl border border-zinc-900/80 p-3.5 rounded-2xl flex flex-col flex-shrink-0 min-h-0 overflow-y-auto no-scrollbar">
           <div className="flex flex-col min-h-full">
             <div className="space-y-4 mb-4">
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-2">Navigation</span>
-            
-            <nav className="flex flex-col gap-1">
-              <button onClick={showHomeView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'home' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                <Home className={`w-4 h-4 ${activeView === 'home' ? 'text-violet-400' : ''}`} /> Home
-              </button>
-              <button onClick={() => { setActiveView('queue'); addToast('Queue', 'Navigating to song queue.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'queue' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                <ListMusic className={`w-4 h-4 ${activeView === 'queue' ? 'text-violet-400' : ''}`} /> Queue
-              </button>
-              <button onClick={showAddSongView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'add-song' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                <PlusCircle className={`w-4 h-4 ${activeView === 'add-song' ? 'text-violet-400' : ''}`} /> Add Song
-              </button>
-              <button onClick={showDjModeView} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                <span className="flex items-center gap-3">
-                  <Activity className={`w-4 h-4 ${activeView === 'dj' ? 'text-violet-400' : ''}`} /> DJ Mode
-                </span>
-                <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
-              </button>
-              <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
-              </button>
-              <button onClick={() => { setActiveView('settings'); addToast('Settings', 'Opening room properties.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'settings' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                <Settings className={`w-4 h-4 ${activeView === 'settings' ? 'text-violet-400' : ''}`} /> Settings
-              </button>
-            </nav>
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-2">Navigation</span>
 
-            {/* Thin Hype Mode Card */}
-            <div onClick={triggerHypeMode} className="bg-gradient-to-br from-indigo-950/20 to-violet-950/15 border border-violet-900/30 p-3.5 rounded-xl cursor-pointer hover:border-violet-500/40 transition-all group relative overflow-hidden">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-400">
-                    <Zap className="w-3.5 h-3.5 animate-pulse" />
+              <nav className="flex flex-col gap-1">
+                <button onClick={showHomeView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'home' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <Home className={`w-4 h-4 ${activeView === 'home' ? 'text-violet-400' : ''}`} /> Home
+                </button>
+                <button onClick={() => { setActiveView('queue'); addToast('Queue', 'Navigating to song queue.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'queue' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <ListMusic className={`w-4 h-4 ${activeView === 'queue' ? 'text-violet-400' : ''}`} /> Queue
+                </button>
+                <button onClick={showAddSongView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'add-song' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <PlusCircle className={`w-4 h-4 ${activeView === 'add-song' ? 'text-violet-400' : ''}`} /> Add Song
+                </button>
+                <button onClick={showDjModeView} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <span className="flex items-center gap-3">
+                    <Activity className={`w-4 h-4 ${activeView === 'dj' ? 'text-violet-400' : ''}`} /> DJ Mode
+                  </span>
+                  <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
+                </button>
+                <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
+                </button>
+                <button onClick={() => { setActiveView('settings'); addToast('Settings', 'Opening room properties.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'settings' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <Settings className={`w-4 h-4 ${activeView === 'settings' ? 'text-violet-400' : ''}`} /> Settings
+                </button>
+              </nav>
+
+              {/* Thin Hype Mode Card */}
+              <div onClick={triggerHypeMode} className="bg-gradient-to-br from-indigo-950/20 to-violet-950/15 border border-violet-900/30 p-3.5 rounded-xl cursor-pointer hover:border-violet-500/40 transition-all group relative overflow-hidden">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-400">
+                      <Zap className="w-3.5 h-3.5 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Hype Mode</h4>
+                      <p className="text-[9px] text-zinc-400">Raise hands to spark!</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Hype Mode</h4>
-                    <p className="text-[9px] text-zinc-400">Raise hands to spark!</p>
+                  <div className={`w-7 h-3.5 rounded-full bg-zinc-800 relative transition-colors duration-300 ${hypeModeOn ? 'bg-violet-600' : ''}`}>
+                    <div className={`w-2.5 h-2.5 rounded-full bg-zinc-500 absolute top-0.5 transition-all ${hypeModeOn ? 'left-[14px] bg-white' : 'left-0.5'}`} />
                   </div>
-                </div>
-                <div className={`w-7 h-3.5 rounded-full bg-zinc-800 relative transition-colors duration-300 ${hypeModeOn ? 'bg-violet-600' : ''}`}>
-                  <div className={`w-2.5 h-2.5 rounded-full bg-zinc-500 absolute top-0.5 transition-all ${hypeModeOn ? 'left-[14px] bg-white' : 'left-0.5'}`} />
                 </div>
               </div>
-            </div>
 
-            {/* Offline Connect Widget (Sidebar) */}
-            {!activeRoomCode && (
-              <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4">
-                {!connectMode ? (
-                  <div className="space-y-2">
-                    <button onClick={() => setConnectMode('join')} className="w-full bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-500/20 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all">
-                      Join Room
-                    </button>
-                    <button onClick={() => setConnectMode('create')} className="w-full bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 py-2 rounded-lg text-zinc-300 text-[10px] font-bold uppercase tracking-wider transition-all">
-                      Create Room
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={connectMode === 'create' ? executeCreateRoom : executeJoinRoom} className="flex flex-col gap-2">
-                    <input type="text" value={connectName} onChange={e => setConnectName(e.target.value)} placeholder="DJ Name" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full" />
-                    {connectMode === 'join' && (
-                      <input type="text" value={connectRoomCode} onChange={e => setConnectRoomCode(e.target.value.toUpperCase())} placeholder="Code" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full uppercase" />
-                    )}
-                    {connectError && <div className="text-[9px] text-red-400">{connectError}</div>}
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setConnectMode(null)} className="flex-1 text-[9px] text-zinc-500 hover:text-white uppercase font-bold tracking-wider">Back</button>
-                      <button type="submit" disabled={connectLoading} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider disabled:opacity-50">
-                        {connectMode === 'join' ? 'Join' : 'Start'}
+              {/* Offline Connect Widget (Sidebar) */}
+              {!activeRoomCode && (
+                <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4">
+                  {!connectMode ? (
+                    <div className="space-y-2">
+                      <button onClick={() => setConnectMode('join')} className="w-full bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-500/20 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all">
+                        Join Room
+                      </button>
+                      <button onClick={() => setConnectMode('create')} className="w-full bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 py-2 rounded-lg text-zinc-300 text-[10px] font-bold uppercase tracking-wider transition-all">
+                        Create Room
                       </button>
                     </div>
-                  </form>
-                )}
-              </div>
-            )}
+                  ) : (
+                    <form onSubmit={connectMode === 'create' ? executeCreateRoom : executeJoinRoom} className="flex flex-col gap-2">
+                      <input type="text" value={connectName} onChange={e => setConnectName(e.target.value)} placeholder="DJ Name" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full" />
+                      {connectMode === 'join' && (
+                        <input type="text" value={connectRoomCode} onChange={e => setConnectRoomCode(e.target.value.toUpperCase())} placeholder="Code" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full uppercase" />
+                      )}
+                      {connectError && <div className="text-[9px] text-red-400">{connectError}</div>}
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setConnectMode(null)} className="flex-1 text-[9px] text-zinc-500 hover:text-white uppercase font-bold tracking-wider">Back</button>
+                        <button type="submit" disabled={connectLoading} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider disabled:opacity-50">
+                          {connectMode === 'join' ? 'Join' : 'Start'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-auto space-y-3">
@@ -1297,7 +1347,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
               {/* Leave Room - Only show if activeRoomCode exists */}
               {activeRoomCode && (
-                <button 
+                <button
                   onClick={handleLeaveRoom}
                   className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
                 >
@@ -1352,6 +1402,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             songLinkInput={songLinkInput}
             setSongLinkInput={setSongLinkInput}
             handleAddTrackByUrl={handleAddTrackByUrl}
+            isLoadingYutubeUrl={isLoadingYutubeUrl}
             addToast={addToast}
             currentTrack={currentTrack}
             waveformBars={waveformBars}
@@ -1414,7 +1465,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         ) : null}
 
         {activeView === 'people' ? (
-          <PeopleSection 
+          <PeopleSection
             currentTrack={currentTrack}
             audioElapsedSeconds={audioElapsedSeconds}
             formatTime={formatTime}
@@ -1460,7 +1511,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             <button onClick={prevTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
               <SkipBack className="w-4 h-4" />
             </button>
-            <button 
+            <button
               onClick={togglePlayback}
               className={`p-3 rounded-full transition-all active:scale-95 shadow-md flex items-center justify-center ${isPlaying ? 'bg-emerald-500 text-black shadow-emerald-500/10' : 'bg-violet-600 text-white shadow-violet-600/10'}`}
             >
@@ -1477,12 +1528,12 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           {/* Custom Track progress bar */}
           <div className="flex items-center gap-3 w-full text-[10px]">
             <span className="hud-font text-zinc-500">{formatTime(audioElapsedSeconds)}</span>
-            <div 
+            <div
               onClick={seekTimeline}
               className="flex-1 h-1 bg-zinc-900 rounded-full cursor-pointer relative border border-zinc-800/40"
             >
-              <div 
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-600 to-emerald-500 rounded-full" 
+              <div
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-600 to-emerald-500 rounded-full"
                 style={{ width: `${(audioElapsedSeconds / currentTrack.duration) * 100}%` }}
               />
             </div>
@@ -1544,11 +1595,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       {/* TOAST SYSTEM ALERTS */}
       <div className="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none">
         {toasts.map(toast => (
-          <div 
+          <div
             key={toast.id}
-            className={`flex items-center gap-3 bg-zinc-950 border p-3 rounded-xl shadow-xl max-w-xs pointer-events-auto transform transition-all duration-350 ${
-              toast.isSuccess ? 'border-violet-500/30' : 'border-zinc-800'
-            }`}
+            className={`flex items-center gap-3 bg-zinc-950 border p-3 rounded-xl shadow-xl max-w-xs pointer-events-auto transform transition-all duration-350 ${toast.isSuccess ? 'border-violet-500/30' : 'border-zinc-800'
+              }`}
           >
             <div className="p-1 rounded bg-violet-500/10 text-violet-400">
               {toast.isSuccess ? <Info className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
