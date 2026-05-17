@@ -534,7 +534,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
   // --- DERIVED MEMO STATES ---
-  // const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
+  const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
 
   const currentTrack = useMemo(() => {
     const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: '', userAvatar: '' };
@@ -547,16 +547,33 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const isPlaying = activeRoomCode && supabaseRoom ? supabaseRoom.is_playing : localIsPlaying;
 
   const sortedAndFilteredQueue = useMemo(() => {
-    const sorted = [...queueList].sort((a, b) => b.votes - a.votes);
+    const sorted = activeRoomCode && supabaseRoom 
+      ? [...queueList].sort((a, b) => b.votes - a.votes)
+      : [...queueList]; // Sequential order for Single Mode
+      
     return sorted.filter(song =>
       song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
     );
-  }, [queueList, searchFilterText]);
+  }, [queueList, searchFilterText, activeRoomCode, supabaseRoom]);
 
   const upNextList = useMemo(() => {
-    return [...queueList].sort((a, b) => b.votes - a.votes).filter(song => song.id !== currentTrack.id).slice(0, 3);
-  }, [queueList, currentTrack.id]);
+    if (activeRoomCode && supabaseRoom) {
+      // Room mode: sort by votes
+      return [...queueList]
+        .sort((a, b) => b.votes - a.votes)
+        .filter(song => song.id !== currentTrack.id)
+        .slice(0, 3);
+    } else {
+      // Single mode: show tracks upcoming sequentially
+      const currentIdx = queueList.findIndex(t => t.id === currentTrack.id);
+      if (currentIdx === -1) {
+        return queueList.slice(0, 3);
+      }
+      // Return the next up to 3 tracks after current
+      return queueList.slice(currentIdx + 1, currentIdx + 4);
+    }
+  }, [queueList, currentTrack.id, activeRoomCode, supabaseRoom]);
 
   const filteredTrending = useMemo(() => {
     return TRENDING_POOL.filter(song =>
@@ -716,8 +733,23 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       return;
     }
     let target = currentIdx + 1;
-    if (target >= queueList.length) target = 0;
-    selectTrack(queueList[target].id);
+    if (target >= queueList.length) {
+      if (isRepeat) {
+        target = 0;
+        selectTrack(queueList[target].id);
+      } else {
+        // Stop playback at end of queue
+        if (activeRoomCode && supabaseRoom) {
+          supabaseUpdateRoom({ is_playing: false, current_track_id: null });
+        } else {
+          setLocalIsPlaying(false);
+          setCurrentTrackIndex(-1);
+          setAudioElapsedSeconds(0);
+        }
+      }
+    } else {
+      selectTrack(queueList[target].id);
+    }
   };
 
   const voteSong = (id, value) => {
@@ -1576,6 +1608,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               toggleShuffle={toggleShuffle}
               activeRoomCode={activeRoomCode}
               isHost={isHost}
+              selectTrack={selectTrack}
             />
           ) : null
         }

@@ -19,6 +19,7 @@ export default function QueueSection({
   setActiveView,
   activeRoomCode,
   isHost,
+  selectTrack,
 }) {
   // ─── ROOM MODE: Voting Interface ───────────────────────────────────────────
   if (activeRoomCode) {
@@ -117,20 +118,30 @@ export default function QueueSection({
                     <span className="text-[9px] text-zinc-600 uppercase tracking-wider">votes</span>
                   </div>
 
-                  {/* Vote Buttons */}
+                  {/* Vote Buttons & Host Controls */}
                   <div className="flex flex-col gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => voteSong(track.id, 1)}
-                      className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition-all active:scale-90"
-                    >
-                      <ThumbsUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => voteSong(track.id, -1)}
-                      className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 transition-all active:scale-90"
-                    >
-                      <ThumbsDown className="w-4 h-4" />
-                    </button>
+                    {isHost && !isNowPlaying && (
+                      <button
+                        onClick={() => selectTrack(track.id)}
+                        className="p-2 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 hover:border-violet-500/40 text-violet-400 transition-all active:scale-90 flex items-center justify-center mb-1"
+                      >
+                        <Play className="w-4 h-4 fill-violet-400" />
+                      </button>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => voteSong(track.id, 1)}
+                        className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition-all active:scale-90"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => voteSong(track.id, -1)}
+                        className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 transition-all active:scale-90"
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -174,9 +185,8 @@ export default function QueueSection({
               <tr className="border-b border-zinc-800/60 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                 <th className="pb-3 pl-2 w-12 text-center">#</th>
                 <th className="pb-3">Song</th>
-                <th className="pb-3 hidden sm:table-cell">Added By</th>
-                <th className="pb-3 text-center">Votes</th>
-                <th className="pb-3 text-right pr-4">Actions</th>
+                <th className="pb-3 hidden sm:table-cell">Duration</th>
+                <th className="pb-3 text-right pr-4">Play</th>
               </tr>
             </thead>
             <tbody>
@@ -212,22 +222,15 @@ export default function QueueSection({
                       </div>
                     </td>
                     <td className="py-4 hidden sm:table-cell align-middle">
-                      <div className="flex items-center gap-3">
-                        <img src={track.userAvatar || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
-                        <span className="text-xs font-bold text-zinc-300">{track.addedBy}</span>
-                      </div>
+                      <span className="text-xs font-bold text-zinc-300">{formatTime(track.duration)}</span>
                     </td>
-                    <td className="py-4 text-center align-middle">
-                      <span className={`hud-font text-sm font-bold ${track.votes > 0 ? 'text-emerald-400' : track.votes < 0 ? 'text-rose-400' : 'text-zinc-400'}`}>
-                        {track.votes > 0 ? '+' : ''}{track.votes}
-                      </span>
-                    </td>
-                    <td className="py-4 text-right pr-2 align-middle">
-                      <div className="flex items-center justify-end gap-3">
-                        <button onClick={() => voteSong(track.id, 1)} className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-500 transition-all"><ThumbsUp className="w-4 h-4" /></button>
-                        <button onClick={() => voteSong(track.id, -1)} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all"><ThumbsDown className="w-4 h-4" /></button>
-                        <button className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"><MoreVertical className="w-4 h-4" /></button>
-                      </div>
+                    <td className="py-4 text-right pr-4 align-middle">
+                      <button 
+                        onClick={() => selectTrack(track.id)}
+                        className="p-1.5 rounded-lg bg-violet-600/10 hover:bg-violet-600/20 text-violet-500 transition-all cursor-pointer inline-flex items-center justify-center w-8 h-8"
+                      >
+                        <Play className="w-4 h-4 fill-violet-500" />
+                      </button>
                     </td>
                   </tr>
                 );
