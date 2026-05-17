@@ -1,5 +1,5 @@
-# Use Node 20 as base image
-FROM node:20-bullseye-slim
+# Use Node 24 (Bookworm) as base image to ensure Python >= 3.11 for yt-dlp
+FROM node:24-bookworm-slim
 
 # Install Python 3, FFmpeg, and curl, then explicitly download yt-dlp globally
 RUN apt-get update && apt-get install -y \
