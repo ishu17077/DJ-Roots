@@ -47,8 +47,15 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
     };
 
     // Use cookies if the file exists to bypass YouTube bot detection
-    const cookiesPath = process.env.YOUTUBE_COOKIES_PATH || path.join(__dirname, 'cookies.txt');
-    if (fs.existsSync(cookiesPath)) {
+    // Render mounts Secret Files in Docker at /etc/secrets/
+    let cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+    if (!cookiesPath && fs.existsSync('/etc/secrets/cookies.txt')) {
+      cookiesPath = '/etc/secrets/cookies.txt';
+    } else if (!cookiesPath && fs.existsSync(path.join(__dirname, 'cookies.txt'))) {
+      cookiesPath = path.join(__dirname, 'cookies.txt');
+    }
+
+    if (cookiesPath && fs.existsSync(cookiesPath)) {
       dlOptions.cookies = cookiesPath;
     }
 
