@@ -26,11 +26,14 @@ export default function YouTubePlayer({
     // Replace autoplay parameter based on prop
     const url = new URL(embedUrl);
     url.searchParams.set('autoplay', autoplay ? '1' : '0');
+    url.searchParams.set('controls', controls ? '1' : '0');
     if (muted) {
       url.searchParams.set('mute', '1');
+    } else {
+      url.searchParams.set('mute', '0');
     }
     return url.toString();
-  }, [embedUrl, autoplay, muted]);
+  }, [embedUrl, autoplay, muted, controls]);
 
   useEffect(() => {
     if (!videoId || !embedUrl) {
@@ -43,6 +46,24 @@ export default function YouTubePlayer({
 
   const handleIframeLoad = () => {
     setIsLoading(false);
+
+    if (iframeRef.current?.contentWindow && !muted) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: 'unMute', args: [] }),
+        '*'
+      );
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }),
+        '*'
+      );
+      if (autoplay) {
+        iframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
+          '*'
+        );
+      }
+    }
+
     onReady();
   };
 

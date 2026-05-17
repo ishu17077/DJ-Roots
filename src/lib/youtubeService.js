@@ -1,7 +1,9 @@
 /**
- * YouTube Service - Extract video IDs, fetch metadata, and generate ad-free embed URLs
- * Supports multiple YouTube URL formats and provides video metadata without requiring API keys
+ * YouTube Service - Extract video IDs, fetch metadata, and generate embed URLs.
  */
+
+const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+const YOUTUBE_API_BASE_URL = import.meta.env.VITE_YOUTUBE_API_BASE_URL || 'https://www.googleapis.com/youtube/v3';
 
 /**
  * Extract video ID from various YouTube URL formats
@@ -46,11 +48,19 @@ export const isValidYouTubeUrl = (url) => {
   return extractVideoId(url) !== null;
 };
 
+const parseIso8601DurationToSeconds = (isoDuration) => {
+  if (!isoDuration || typeof isoDuration !== 'string') return 180;
+  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 180;
+  const hours = Number(match[1] || 0);
+  const minutes = Number(match[2] || 0);
+  const seconds = Number(match[3] || 0);
+  return (hours * 3600) + (minutes * 60) + seconds || 180;
+};
+
 /**
- * Fetch video metadata using Noembed API (no auth required)
- * Returns basic video information: title, duration, thumbnail
- * @param {string} videoId - YouTube video ID
- * @returns {Promise<Object>} - Video metadata or default values if fetch fails
+ * Fetch video metadata from YouTube Data API v3.
+ * Falls back to noembed if API key is not configured or request fails.
  */
 export const fetchVideoMetadata = async (videoId) => {
   if (!videoId) {
@@ -58,20 +68,65 @@ export const fetchVideoMetadata = async (videoId) => {
   }
 
   try {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(youtubeUrl)}`);
+    if (YOUTUBE_API_KEY) {
+      const params = new URLSearchParams({
+        part: 'snippet,contentDetails,status',
+        id: videoId,
+        key: YOUTUBE_API_KEY,
+      });
 
-    if (!response.ok) {
-      return getDefaultMetadata(videoId);
+      const response = await fetch(`${YOUTUBE_API_BASE_URL}/videos?${params.toString()}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        const item = data?.items?.[0];
+
+        if (item?.status?.embeddable === false) {
+          return {
+            ...getDefaultMetadata(videoId),
+            embeddable: false,
+            success: false,
+          };
+        }
+
+        if (item) {
+          const thumb =
+            item.snippet?.thumbnails?.maxres?.url ||
+            item.snippet?.thumbnails?.standard?.url ||
+            item.snippet?.thumbnails?.high?.url ||
+            item.snippet?.thumbnails?.medium?.url ||
+            item.snippet?.thumbnails?.default?.url ||
+            getThumbnailUrl(videoId);
+
+          return {
+            title: item.snippet?.title || 'Unknown Title',
+            channelTitle: item.snippet?.channelTitle || 'Unknown Artist',
+            duration: parseIso8601DurationToSeconds(item.contentDetails?.duration),
+            thumbnail: thumb,
+            videoId,
+            embeddable: item.status?.embeddable !== false,
+            success: true,
+          };
+        }
+      } else {
+        console.warn('YouTube Data API request failed, falling back to noembed');
+      }
     }
 
-    const data = await response.json();
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const fallbackResponse = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(youtubeUrl)}`);
+    if (!fallbackResponse.ok) {
+      return getDefaultMetadata(videoId);
+    }
+    const fallbackData = await fallbackResponse.json();
 
     return {
-      title: data.title || 'Unknown Title',
-      duration: data.video_id ? estimateDuration(data) : 180, // Estimate 3 minutes if unknown
-      thumbnail: data.thumbnail_url || getThumbnailUrl(videoId),
-      videoId: videoId,
+      title: fallbackData.title || 'Unknown Title',
+      channelTitle: fallbackData.author_name || 'Unknown Artist',
+      duration: 180,
+      thumbnail: fallbackData.thumbnail_url || getThumbnailUrl(videoId),
+      videoId,
+      embeddable: true,
       success: true
     };
   } catch (error) {
@@ -107,29 +162,25 @@ const getDefaultMetadata = (videoId = null) => {
   };
 };
 
-/**
- * Estimate duration from Noembed data (rough estimation)
- * @param {Object} data - Noembed API response
- * @returns {number} - Estimated duration in seconds
- */
-const estimateDuration = (data) => {
-  // Noembed doesn't always provide duration
-  // Default to 3 minutes as safe estimate
-  return 180;
-};
-
-/**
- * Build ad-free embed URL using youtube-nocookie.com
- * This domain doesn't serve ads
- * @param {string} videoId - YouTube video ID
- * @returns {string} - Embed URL without ads
- */
 export const buildEmbedUrl = (videoId) => {
   if (!videoId) return '';
 
-  // Use youtube-nocookie.com domain to prevent ads
-  // Parameters: rel=0 (no related videos), modestbranding=1 (smaller player), fs=1 (fullscreen)
-  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&fs=1&autoplay=0&controls=1`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const params = new URLSearchParams({
+    rel: '0',
+    modestbranding: '1',
+    fs: '1',
+    autoplay: '0',
+    controls: '1',
+    playsinline: '1',
+    enablejsapi: '1',
+    mute: '0',
+  });
+  if (origin) {
+    params.set('origin', origin);
+  }
+
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 };
 
 /**
@@ -164,7 +215,10 @@ export const extractArtistFromTitle = (title) => {
  */
 export const createSongFromYouTube = async (videoId, addedBy = 'Guest') => {
   const metadata = await fetchVideoMetadata(videoId);
-  const artist = extractArtistFromTitle(metadata.title);
+  if (metadata.embeddable === false) {
+    throw new Error('This YouTube video cannot be embedded.');
+  }
+  const artist = metadata.channelTitle || extractArtistFromTitle(metadata.title);
 
   return {
     id: `youtube-${videoId}`,
