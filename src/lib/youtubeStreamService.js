@@ -3,7 +3,8 @@
  * Communicates with the backend server to extract audio streams from YouTube videos
  */
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 /**
  * Get the audio stream URL for a YouTube video
@@ -16,7 +17,11 @@ export const getYouTubeStreamUrl = async (videoId) => {
   }
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/youtube/stream/${videoId}`);
+    const response = await fetch(`${BACKEND_URL}/api/youtube/stream/${videoId}`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      }
+    });
 
     if (!response.ok) {
       const error = await response.json();
@@ -42,7 +47,11 @@ export const getYouTubeMetadata = async (videoId) => {
   }
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/youtube/metadata/${videoId}`);
+    const response = await fetch(`${BACKEND_URL}/api/youtube/metadata/${videoId}`, {
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      }
+    });
 
     if (!response.ok) {
       const error = await response.json();
@@ -71,9 +80,12 @@ export const getYouTubeStreamInfo = async (videoId) => {
     const response = await fetch(`${BACKEND_URL}/api/youtube/info`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        "ngrok-skip-browser-warning": "69420",
       },
-      body: JSON.stringify({ videoId })
+      body: JSON.stringify({
+        videoId
+      })
     });
 
     if (!response.ok) {
@@ -95,7 +107,12 @@ export const getYouTubeStreamInfo = async (videoId) => {
  */
 export const checkBackendHealth = async () => {
   try {
-    const response = await fetch(`${BACKEND_URL}/health`, { method: 'GET' });
+    const response = await fetch(`${BACKEND_URL}/health`, {
+      method: 'GET',
+      headers: {
+        "ngrok-skip-browser-warning": "69420",
+      }
+    });
     return response.ok;
   } catch {
     return false;
