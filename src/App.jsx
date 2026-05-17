@@ -833,9 +833,13 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             setWebcamActive(true);
             addToast('Webcam Streaming', 'Casting workspace stream metrics.');
           })
-          .catch(() => {
-            addToast('Webcam Blocked', 'Please check camera access permissions.', false);
+          .catch((err) => {
+            console.error('Camera access error:', err);
+            addToast('Webcam Blocked', `Error: ${err.message || 'Check camera access permissions.'}`, false);
           });
+      } else {
+        console.error('navigator.mediaDevices is undefined. Ensure you are on HTTPS or localhost.');
+        addToast('Camera Unavailable', 'Camera requires a secure context (HTTPS) or localhost.', false);
       }
     }
   };

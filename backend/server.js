@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const youtubeDl = require('youtube-dl-exec');
+const youtubeDl = require('youtube-dl-exec').create(process.env.YOUTUBE_DL_BINARY || 'yt-dlp');
 const https = require('https');
 const http = require('http');
 
@@ -23,10 +23,14 @@ app.use(express.json());
  * Returns: { url, format, duration, title }
  */
 app.get('/api/youtube/stream/:videoId', async (req, res) => {
-  const { videoId } = req.params;
+  const {
+    videoId
+  } = req.params;
 
   if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-    return res.status(400).json({ error: 'Invalid video ID' });
+    return res.status(400).json({
+      error: 'Invalid video ID'
+    });
   }
 
   try {
@@ -43,7 +47,9 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
 
     const streamUrl = info?.url;
     if (!streamUrl) {
-      return res.status(404).json({ error: 'Could not extract stream URL from this video' });
+      return res.status(404).json({
+        error: 'Could not extract stream URL from this video'
+      });
     }
 
     console.log(`\uD83D\uDD01 Proxying audio stream for: ${videoId}`);
@@ -57,7 +63,9 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
 
     // Proxy the audio through our backend to avoid browser CORS restrictions
     const protocol = streamUrl.startsWith('https') ? https : http;
-    const proxyReq = protocol.get(streamUrl, { headers: reqHeaders }, (audioRes) => {
+    const proxyReq = protocol.get(streamUrl, {
+      headers: reqHeaders
+    }, (audioRes) => {
       const status = rangeHeader && audioRes.statusCode === 206 ? 206 : 200;
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Content-Type', audioRes.headers['content-type'] || 'audio/mp4');
@@ -70,14 +78,20 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
 
     proxyReq.on('error', (err) => {
       console.error('Proxy request error:', err.message);
-      if (!res.headersSent) res.status(500).json({ error: 'Stream proxy failed', message: err.message });
+      if (!res.headersSent) res.status(500).json({
+        error: 'Stream proxy failed',
+        message: err.message
+      });
     });
 
     req.on('close', () => proxyReq.destroy());
 
   } catch (error) {
     console.error(`Error extracting stream for ${videoId}:`, error.message);
-    res.status(500).json({ error: 'Failed to extract stream URL', message: error.message });
+    res.status(500).json({
+      error: 'Failed to extract stream URL',
+      message: error.message
+    });
   }
 });
 
@@ -87,15 +101,21 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
  * Returns: { title, duration, channelTitle, description }
  */
 app.get('/api/youtube/metadata/:videoId', async (req, res) => {
-  const { videoId } = req.params;
+  const {
+    videoId
+  } = req.params;
 
   if (!videoId) {
-    return res.status(400).json({ error: 'Video ID is required' });
+    return res.status(400).json({
+      error: 'Video ID is required'
+    });
   }
 
   try {
     if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-      return res.status(400).json({ error: 'Invalid video ID format' });
+      return res.status(400).json({
+        error: 'Invalid video ID format'
+      });
     }
 
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -133,15 +153,21 @@ app.get('/api/youtube/metadata/:videoId', async (req, res) => {
  * Get both stream URL and metadata in one request
  */
 app.post('/api/youtube/info', async (req, res) => {
-  const { videoId } = req.body;
+  const {
+    videoId
+  } = req.body;
 
   if (!videoId) {
-    return res.status(400).json({ error: 'Video ID is required' });
+    return res.status(400).json({
+      error: 'Video ID is required'
+    });
   }
 
   try {
     if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-      return res.status(400).json({ error: 'Invalid video ID format' });
+      return res.status(400).json({
+        error: 'Invalid video ID format'
+      });
     }
 
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -179,7 +205,10 @@ app.post('/api/youtube/info', async (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'YouTube Stream Extractor' });
+  res.json({
+    status: 'ok',
+    service: 'YouTube Stream Extractor'
+  });
 });
 
 // Error handling middleware
@@ -193,7 +222,9 @@ app.use((err, req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Endpoint not found' });
+  res.status(404).json({
+    error: 'Endpoint not found'
+  });
 });
 
 app.listen(PORT, () => {
