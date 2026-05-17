@@ -1016,7 +1016,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   // Handle Web Audio Sequencer arpeggiator
   useEffect(() => {
-    if (isPlaying) {
+    // Disable the internal sequencer/synthesizer when playing back a YouTube track
+    if (isPlaying && currentTrack?.source !== 'youtube') {
       initAudioEngine();
       sequencerIntervalRef.current = setInterval(() => {
         const basePitch = currentTrack ? currentTrack.pitch : 220;
