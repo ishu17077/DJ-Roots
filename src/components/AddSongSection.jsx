@@ -7,8 +7,6 @@ import {
   PlayCircle,
   Plus,
   Search,
-  ThumbsDown,
-  ThumbsUp,
 } from './icons.jsx';
 
 export default function AddSongSection({
@@ -29,11 +27,6 @@ export default function AddSongSection({
   audioElapsedSeconds,
   formatTime,
   upNextList,
-  skipUpvotes,
-  setSkipUpvotes,
-  skipDownvotes,
-  setSkipDownvotes,
-  skipThreshold,
 }) {
   return (
     <>
@@ -137,8 +130,8 @@ export default function AddSongSection({
                 <Link className="w-5 h-5 animate-pulse" />
               </div>
               <div>
-                <h4 className="text-xs font-extrabold text-white">Add Song via URL</h4>
-                <p className="text-[10px] text-zinc-500 mt-0.5">YouTube, Spotify or SoundCloud link (YouTube shows thumbnail)</p>
+                <h4 className="text-xs font-extrabold text-white">Add Song via YouTube</h4>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Paste any YouTube video link (youtube.com or youtu.be) • No ads!</p>
               </div>
             </div>
 
@@ -172,7 +165,7 @@ export default function AddSongSection({
 
           <div className="flex items-center gap-3 bg-zinc-900/10 border border-zinc-900 px-4 py-3.5 rounded-xl">
             <Info className="w-4 h-4 text-violet-400" />
-            <span className="text-[11px] text-zinc-400 font-medium">Please make sure the link is valid and accessible to everyone in the room.</span>
+            <span className="text-[11px] text-zinc-400 font-medium">YouTube videos play without ads. Share any valid YouTube link and it will be instantly processed with full metadata.</span>
           </div>
         </section>
       </main>
