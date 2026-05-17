@@ -523,9 +523,16 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const lastGestureTimeRef = useRef(0);
   // Ref to the YouTube audio element's seek function — set by YouTubeAudioPlayer via HomeSection
   const youtubeSeekRef = useRef(null);
+  // Ref to the YouTube audio element's volume control — set by YouTubeAudioPlayer via HomeSection
+  const youtubeVolumeRef = useRef(null);
 
   // Track the user's local votes: { [song_id]: 1 | -1 }
   const [userVotes, setUserVotes] = useState({});
+
+  // Is the current user the HOST of the active room?
+  const isHost = !activeRoomCode || !supabaseRoom
+    ? true   // offline mode — full control
+    : (userProfile?.id === supabaseRoom?.host_id);
 
   const [offlineQueue, setOfflineQueue] = useState(() => [TRENDING_POOL[0], TRENDING_POOL[1]]);
 
@@ -623,6 +630,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   // --- TIMERS & CONTROLLERS ---
   const togglePlayback = () => {
+    // Non-hosts cannot control playback in a room
+    if (activeRoomCode && !isHost) return;
     initAudioEngine();
     if (activeRoomCode && supabaseRoom) {
       if (!isHost) {
@@ -634,6 +643,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     }
     setLocalIsPlaying(prev => !prev);
   };
+
 
   const showHomeView = () => {
     setActiveView('home');
@@ -655,6 +665,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     setVolume(parsed);
     if (masterGainRef.current && audioCtxRef.current) {
       masterGainRef.current.gain.setValueAtTime(parsed / 200, audioCtxRef.current.currentTime);
+    }
+    // Also sync the YouTube <audio> element's native volume
+    if (youtubeVolumeRef.current) {
+      youtubeVolumeRef.current(parsed / 100);
     }
   };
 
@@ -1110,6 +1124,31 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     };
   }, [isPlaying, currentTrack, isShuffle]);
 
+  // ── REALTIME ROOM SYNC ──────────────────────────────────────────────────────
+  // When Supabase broadcasts a room change (from any user), apply it locally.
+  // This is what makes play/pause and track changes collaborative.
+  const lastSyncedRoomRef = useRef({ is_playing: null, current_track_id: null });
+  useEffect(() => {
+    if (!supabaseRoom || !activeRoomCode) return;
+
+    // Sync is_playing
+    if (supabaseRoom.is_playing !== lastSyncedRoomRef.current.is_playing) {
+      lastSyncedRoomRef.current.is_playing = supabaseRoom.is_playing;
+      setIsPlaying(supabaseRoom.is_playing);
+    }
+
+    // Sync current_track_id → find the matching index in the local queue
+    if (supabaseRoom.current_track_id &&
+        supabaseRoom.current_track_id !== lastSyncedRoomRef.current.current_track_id) {
+      lastSyncedRoomRef.current.current_track_id = supabaseRoom.current_track_id;
+      const idx = queueList.findIndex(t => t.id === supabaseRoom.current_track_id);
+      if (idx !== -1) {
+        setCurrentTrackIndex(idx);
+        setAudioElapsedSeconds(0);
+      }
+    }
+  }, [supabaseRoom, activeRoomCode, queueList]);
+
   // Handle Web Audio Sequencer arpeggiator
   useEffect(() => {
     // Disable the internal sequencer/synthesizer when playing back a YouTube track
@@ -1459,6 +1498,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             authDisplayName={authDisplayName}
             onTimeUpdate={(t) => setAudioElapsedSeconds(Math.floor(t))}
             onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
+            onRegisterVolume={(fn) => { youtubeVolumeRef.current = fn; }}
+            isHost={isHost}
           />
         </div>
 

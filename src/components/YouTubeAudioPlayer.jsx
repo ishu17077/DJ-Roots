@@ -18,6 +18,7 @@ export default function YouTubeAudioPlayer({
   onEnded = () => { },
   onError = () => { },
   onRegisterSeek = () => { },
+  onRegisterVolume = () => { },
   autoplay = false,
   showControls = true,
 }) {
@@ -45,6 +46,16 @@ export default function YouTubeAudioPlayer({
     // Cleanup: unregister on unmount
     return () => onRegisterSeek(null);
   }, [onRegisterSeek]);
+
+  // Register volume control so the bottom bar slider controls the real audio element
+  useEffect(() => {
+    onRegisterVolume((vol) => {
+      if (audioRef.current) {
+        audioRef.current.volume = Math.max(0, Math.min(1, vol));
+      }
+    });
+    return () => onRegisterVolume(null);
+  }, [onRegisterVolume]);
 
   // Auto-play when isPlaying prop changes
   useEffect(() => {

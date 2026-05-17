@@ -164,28 +164,45 @@ export async function fetchQueue(roomId) {
 
 /** Add a song to the queue. Creates the song record if it doesn't exist. */
 export async function addSongToQueue(roomId, songData, addedByProfileId) {
-  // Upsert the song into the songs table
+  // ── Step 1: Upsert the song record by title+artist (always works) ──────────
+  const songUpsertData = {
+    title: (songData.title || 'Unknown').slice(0, 200),
+    artist: (songData.artist || 'Unknown').slice(0, 200),
+    duration: songData.duration || 200,
+    bpm: songData.bpm || 120,
+    key: songData.key || 'C Maj',
+    pitch: songData.pitch || 260,
+    // YouTube thumbnail URLs embed the video ID: img.youtube.com/vi/{ID}/...
+    img_url: songData.img || songData.img_url || null,
+  };
+
   const { data: song, error: songErr } = await supabase
     .from('songs')
-    .upsert({
-      title: songData.title,
-      artist: songData.artist,
-      duration: songData.duration || 200,
-      bpm: songData.bpm || 120,
-      key: songData.key || 'C Maj',
-      pitch: songData.pitch || 260,
-      img_url: songData.img || songData.img_url || null,
-    }, { onConflict: 'title,artist' })
+    .upsert(songUpsertData, { onConflict: 'title,artist' })
     .select()
     .single();
 
-  if (songErr) {
+  if (songErr || !song) {
     console.error('addSong upsert error:', songErr);
     return null;
   }
 
-  // Check if this song is already in the queue for this room
-  const { data: existing } = await supabase
+  // ── Step 2: If migration 004 has been run, enrich with YouTube fields ───────
+  if (songData.youtubeVideoId && song.id) {
+    supabase
+      .from('songs')
+      .update({
+        source: 'youtube',
+        youtube_video_id: songData.youtubeVideoId,
+        embed_url: songData.embedUrl || null,
+      })
+      .eq('id', song.id)
+      .then(() => {}) // fire-and-forget; ignore error if columns don't exist yet
+      .catch(() => {});
+  }
+
+  // ── Step 3: Check if already in the queue (to upvote instead of double-add) ─
+  const { data: existingItem } = await supabase
     .from('queue_items')
     .select('id')
     .eq('room_id', roomId)
@@ -193,13 +210,12 @@ export async function addSongToQueue(roomId, songData, addedByProfileId) {
     .is('played_at', null)
     .maybeSingle();
 
-  if (existing) {
-    // Song already in queue — upvote it instead
-    await voteSong(existing.id, addedByProfileId, 1);
-    return existing;
+  if (existingItem) {
+    await voteSong(existingItem.id, addedByProfileId, 1);
+    return existingItem;
   }
 
-  // Insert the queue item
+  // ── Step 4: Insert the queue item ──────────────────────────────────────────
   const { data: queueItem, error: qErr } = await supabase
     .from('queue_items')
     .insert({
@@ -214,7 +230,6 @@ export async function addSongToQueue(roomId, songData, addedByProfileId) {
   if (qErr) console.error('addSongToQueue insert error:', qErr);
   return queueItem;
 }
-
 /** Remove a queue item */
 export async function removeFromQueue(queueItemId) {
   const { error } = await supabase
