@@ -533,8 +533,6 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const queueList = activeRoomCode ? supabaseQueue : offlineQueue;
   const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
-  // --- DERIVED MEMO STATES ---
-  // const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
 
   const currentTrack = useMemo(() => {
     const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: '', userAvatar: '' };
