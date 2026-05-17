@@ -154,7 +154,6 @@ export default function YouTubeAudioPlayer({
         onError={handleError}
         onLoadStart={handleLoadStart}
         onCanPlay={handleCanPlay}
-        crossOrigin="anonymous"
       />
 
       {/* Player UI */}
