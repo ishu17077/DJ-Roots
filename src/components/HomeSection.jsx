@@ -54,15 +54,26 @@ export default function HomeSection({
                 {/* Content split */}
                 <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10">
 
+<<<<<<< HEAD
                     {/* Left Side: Vinyl or YouTube Player */}
                     <div className="w-full lg:w-1/2 flex items-center justify-center relative h-full min-h-0 shrink-1">
                         {currentTrack?.source === 'youtube' && currentTrack?.embedUrl ? (
                             <div className="w-full max-w-[480px] px-4 lg:px-0">
+=======
+                    {/* Left Side: YouTube Player or Vinyl */}
+                    <div className="w-full lg:w-1/2 flex items-center justify-center relative h-full min-h-0 shrink-1">
+                        {currentTrack?.source === 'youtube' && currentTrack?.youtubeVideoId ? (
+                            <div className="w-full px-6">
+>>>>>>> agents/youtube-song-playback-update
                                 <YouTubePlayer
                                     videoId={currentTrack.youtubeVideoId}
                                     embedUrl={currentTrack.embedUrl}
                                     title={currentTrack.title}
                                     autoplay={isPlaying}
+<<<<<<< HEAD
+=======
+                                    muted={false}
+>>>>>>> agents/youtube-song-playback-update
                                     controls={true}
                                     showInfo={true}
                                 />

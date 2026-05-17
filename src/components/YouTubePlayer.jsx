@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 
 /**
  * YouTube Player Component
@@ -19,6 +19,18 @@ export default function YouTubePlayer({
   const iframeRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Build dynamic embed URL with autoplay parameter
+  const dynamicEmbedUrl = useMemo(() => {
+    if (!embedUrl) return '';
+    // Replace autoplay parameter based on prop
+    const url = new URL(embedUrl);
+    url.searchParams.set('autoplay', autoplay ? '1' : '0');
+    if (muted) {
+      url.searchParams.set('mute', '1');
+    }
+    return url.toString();
+  }, [embedUrl, autoplay, muted]);
 
   useEffect(() => {
     if (!videoId || !embedUrl) {
@@ -62,7 +74,7 @@ export default function YouTubePlayer({
         )}
         <iframe
           ref={iframeRef}
-          src={embedUrl}
+          src={dynamicEmbedUrl}
           title={title || 'YouTube Video'}
           className="w-full h-full"
           frameBorder="0"
