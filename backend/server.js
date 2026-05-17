@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const youtubeDl = require('youtube-dl-exec');
+const https = require('https');
+const http = require('http');
 
 dotenv.config();
 
@@ -23,76 +25,59 @@ app.use(express.json());
 app.get('/api/youtube/stream/:videoId', async (req, res) => {
   const { videoId } = req.params;
 
-  if (!videoId) {
-    return res.status(400).json({ error: 'Video ID is required' });
+  if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    return res.status(400).json({ error: 'Invalid video ID' });
   }
 
   try {
-    // Validate video ID format
-    if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-      return res.status(400).json({ error: 'Invalid video ID format' });
-    }
-
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    console.log(`\uD83C\uDFB5 Extracting stream for: ${videoId}`);
 
-    console.log(`Extracting stream for video: ${videoId}`);
-
-    // Extract the best audio-only format
-    const stream = await youtubeDl(youtubeUrl, {
+    // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
+    const info = await youtubeDl(youtubeUrl, {
+      dumpSingleJson: true,
+      format: 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
       quiet: true,
       noWarnings: true,
-      dumpSingleJson: true,
-      format: 'bestaudio[ext=m4a]/bestaudio',
-      getUrl: true,
     });
 
-    if (!stream || !stream.url) {
-      return res.status(404).json({
-        error: 'Could not extract stream URL from this video',
-        details: 'The video may be unavailable, restricted, or does not allow audio extraction'
-      });
+    const streamUrl = info?.url;
+    if (!streamUrl) {
+      return res.status(404).json({ error: 'Could not extract stream URL from this video' });
     }
 
-    // Return the stream data
-    res.json({
-      success: true,
-      url: stream.url,
-      format: stream.format || 'audio/mp4',
-      duration: stream.duration || null,
-      title: stream.title || 'Unknown',
-      ext: stream.ext || 'm4a'
+    console.log(`\uD83D\uDD01 Proxying audio stream for: ${videoId}`);
+
+    // Support range requests for seeking
+    const rangeHeader = req.headers.range;
+    const reqHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    };
+    if (rangeHeader) reqHeaders['Range'] = rangeHeader;
+
+    // Proxy the audio through our backend to avoid browser CORS restrictions
+    const protocol = streamUrl.startsWith('https') ? https : http;
+    const proxyReq = protocol.get(streamUrl, { headers: reqHeaders }, (audioRes) => {
+      const status = rangeHeader && audioRes.statusCode === 206 ? 206 : 200;
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', audioRes.headers['content-type'] || 'audio/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      if (audioRes.headers['content-length']) res.setHeader('Content-Length', audioRes.headers['content-length']);
+      if (audioRes.headers['content-range']) res.setHeader('Content-Range', audioRes.headers['content-range']);
+      res.status(status);
+      audioRes.pipe(res);
     });
+
+    proxyReq.on('error', (err) => {
+      console.error('Proxy request error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: 'Stream proxy failed', message: err.message });
+    });
+
+    req.on('close', () => proxyReq.destroy());
 
   } catch (error) {
     console.error(`Error extracting stream for ${videoId}:`, error.message);
-
-    // Handle specific error cases
-    if (error.message.includes('Video unavailable') || error.message.includes('not found')) {
-      return res.status(404).json({
-        error: 'Video not found or unavailable',
-        message: error.message
-      });
-    }
-
-    if (error.message.includes('not available in your country')) {
-      return res.status(403).json({
-        error: 'Video not available in your region',
-        message: error.message
-      });
-    }
-
-    if (error.message.includes('age restricted')) {
-      return res.status(403).json({
-        error: 'Age-restricted content cannot be played',
-        message: error.message
-      });
-    }
-
-    // Generic error
-    res.status(500).json({
-      error: 'Failed to extract stream URL',
-      message: error.message || 'Unknown error occurred'
-    });
+    res.status(500).json({ error: 'Failed to extract stream URL', message: error.message });
   }
 });
 
