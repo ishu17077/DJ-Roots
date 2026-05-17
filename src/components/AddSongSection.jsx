@@ -21,6 +21,7 @@ export default function AddSongSection({
   songLinkInput,
   setSongLinkInput,
   handleAddTrackByUrl,
+  isLoadingYutubeUrl,
   addToast,
   currentTrack,
   waveformBars,
@@ -137,7 +138,7 @@ export default function AddSongSection({
               </div>
               <div>
                 <h4 className="text-xs font-extrabold text-white">Add Song via URL</h4>
-                <p className="text-[10px] text-zinc-500 mt-0.5">Paste a YouTube, Spotify or SoundCloud link</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">YouTube, Spotify or SoundCloud link (YouTube shows thumbnail)</p>
               </div>
             </div>
 
@@ -147,10 +148,24 @@ export default function AddSongSection({
                 value={songLinkInput}
                 onChange={(e) => setSongLinkInput(e.target.value)}
                 placeholder="Paste song link here..."
-                className="flex-1 bg-[#06060c] border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500/60 placeholder-zinc-600"
+                disabled={isLoadingYutubeUrl}
+                className="flex-1 bg-[#06060c] border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500/60 placeholder-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <button type="submit" className="bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-[10px] tracking-wider uppercase px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow shadow-violet-600/20">
-                Add to Queue <PlayCircle className="w-4.5 h-4.5" />
+              <button 
+                type="submit" 
+                disabled={isLoadingYutubeUrl}
+                className="bg-violet-600 hover:bg-violet-500 disabled:bg-violet-700 disabled:opacity-50 text-white font-extrabold text-[10px] tracking-wider uppercase px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow shadow-violet-600/20 disabled:cursor-not-allowed"
+              >
+                {isLoadingYutubeUrl ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Add to Queue <PlayCircle className="w-4.5 h-4.5" />
+                  </>
+                )}
               </button>
             </div>
           </form>
