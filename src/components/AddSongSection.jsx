@@ -199,22 +199,7 @@ export default function AddSongSection({
           </div>
         </section>
 
-        <section className="bg-zinc-950/40 border border-zinc-900 p-4 rounded-2xl space-y-3">
-          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Vote to Skip</span>
-          <p className="text-[10px] text-zinc-400">Downvote to skip this song</p>
-          <div className="h-1.5 bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden">
-            <div className="h-full bg-rose-500 rounded-full transition-all duration-300" style={{ width: `${(skipDownvotes / skipThreshold) * 100}%` }} />
-          </div>
-          <div className="flex items-center justify-between pt-1">
-            <button onClick={() => { setSkipUpvotes((p) => p + 1); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 hover:bg-zinc-800 text-xs font-bold text-emerald-400">
-              <ThumbsUp className="w-3.5 h-3.5" /> {skipUpvotes}
-            </button>
-            <button onClick={() => { setSkipDownvotes((p) => p + 1); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 hover:bg-zinc-800 text-xs font-bold text-rose-500">
-              {skipDownvotes} <ThumbsDown className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <p className="text-[9px] text-zinc-500 text-center font-semibold pt-1">Need {Math.max(0, skipThreshold - skipDownvotes)} more downvotes to skip</p>
-        </section>
+
       </aside>
     </>
   );

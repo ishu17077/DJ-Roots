@@ -508,6 +508,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const requestRef = useRef(null);
   const lastGestureTimeRef = useRef(0);
 
+  // Track the user's local votes: { [song_id]: 1 | -1 }
+  const [userVotes, setUserVotes] = useState({});
+
   const [offlineQueue, setOfflineQueue] = useState(() => [TRENDING_POOL[0], TRENDING_POOL[1]]);
 
   // --- Derived queue state (real data from Supabase, or local offline fallback) ---
@@ -651,14 +654,27 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   const voteSong = (id, value) => {
+    // Prevent duplicate voting for the same value
+    if (userVotes[id] === value) {
+      addToast('Vote Blocked', 'You have already voted for this song.', false);
+      return;
+    }
+
+    // Calculate the actual vote delta (e.g., changing from -1 to 1 means delta is +2)
+    const prevVote = userVotes[id] || 0;
+    const delta = value - prevVote;
+    
+    // Track locally
+    setUserVotes(prev => ({ ...prev, [id]: value }));
+
     // Supabase path
     if (supabaseConnected) {
-      supabaseVote(id, value);
+      supabaseVote(id, delta);
     }
     // Optimistic local update (works for both online + offline)
     setQueueList(prev => prev.map(song => {
       if (song.id === id) {
-        const newVotes = song.votes + value;
+        const newVotes = song.votes + delta;
         addToast('Vote Tallied', `${song.title} weight adjusted to: ${newVotes}`);
         return { ...song, votes: newVotes };
       }
@@ -1173,8 +1189,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       <div className="flex-1 flex flex-row gap-4 p-4 min-h-0 w-full overflow-hidden">
         
         {/* SLEEK LEFT SIDEBAR */}
-        <aside className="w-60 bg-zinc-950/40 backdrop-blur-xl border border-zinc-900/80 p-3.5 rounded-2xl flex flex-col justify-between flex-shrink-0 min-h-0">
-          <div className="space-y-4">
+        <aside className="w-60 bg-zinc-950/40 backdrop-blur-xl border border-zinc-900/80 p-3.5 rounded-2xl flex flex-col flex-shrink-0 min-h-0 overflow-y-auto no-scrollbar">
+          <div className="flex flex-col min-h-full">
+            <div className="space-y-4 mb-4">
             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-2">Navigation</span>
             
             <nav className="flex flex-col gap-1">
@@ -1248,45 +1265,48 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                 )}
               </div>
             )}
-          </div>
+            </div>
 
-          {/* Current DJ Summary - Only show if activeRoomCode exists */}
-          {activeRoomCode && (
-            <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
-              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
-              <div className="flex items-center gap-2.5">
-                <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
-                <div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
-                    <Crown className="w-3 h-3 text-amber-400" />
+            <div className="mt-auto space-y-3">
+              {/* Current DJ Summary - Only show if activeRoomCode exists */}
+              {activeRoomCode && (
+                <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
+                  <div className="flex items-center gap-2.5">
+                    <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                    <div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
+                        <Crown className="w-3 h-3 text-amber-400" />
+                      </div>
+                      <div className="hud-font text-violet-400 text-xs font-bold">
+                        {formatTime(djTimerSeconds)} <span className="text-[9px] text-zinc-500">Left</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="hud-font text-violet-400 text-xs font-bold">
-                    {formatTime(djTimerSeconds)} <span className="text-[9px] text-zinc-500">Left</span>
+                  <div className="flex gap-1">
+                    <button onClick={extendDJTime} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                      Extend
+                    </button>
+                    <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                      Change
+                    </button>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={extendDJTime} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                  Extend
-                </button>
-                <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                  Change
-                </button>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Leave Room - Only show if activeRoomCode exists */}
-          {activeRoomCode && (
-            <button 
-              onClick={handleLeaveRoom}
-              className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-              Leave Room
-            </button>
-          )}
+              {/* Leave Room - Only show if activeRoomCode exists */}
+              {activeRoomCode && (
+                <button 
+                  onClick={handleLeaveRoom}
+                  className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                  Leave Room
+                </button>
+              )}
+            </div>
+          </div>
         </aside>
 
         {activeView === 'home' ? (

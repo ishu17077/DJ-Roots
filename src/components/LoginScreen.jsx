@@ -70,7 +70,9 @@ export default function LoginScreen({ onAuthSuccess }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email.trim()) { setError('Please enter your email'); return; }
+    if (!email.includes('@')) { setError('Please enter a valid email address'); return; }
     if (!password.trim()) { setError('Please enter your password'); return; }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -82,7 +84,7 @@ export default function LoginScreen({ onAuthSuccess }) {
       if (authError) {
         // If email not confirmed or auth fails, try direct DB lookup
         console.warn('Auth error, trying direct profile lookup:', authError.message);
-        const found = await fallbackProfileLogin(email);
+        const found = await fallbackProfileLogin(email.trim());
         if (!found) {
           setError('No account found with this email. Please sign up first.');
         }
@@ -101,7 +103,9 @@ export default function LoginScreen({ onAuthSuccess }) {
     e.preventDefault();
     if (!displayName.trim()) { setError('Please enter your display name'); return; }
     if (!email.trim()) { setError('Please enter your email'); return; }
+    if (!email.includes('@')) { setError('Please enter a valid email address'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -122,7 +126,7 @@ export default function LoginScreen({ onAuthSuccess }) {
         } else {
           // Email confirmation is ON — try direct DB fallback
           // The trigger should have created the profile already
-          const found = await fallbackProfileLogin(email);
+          const found = await fallbackProfileLogin(email.trim());
           if (!found) {
             // Profile not created yet by trigger, create it manually
             const { data: newProfile } = await supabase

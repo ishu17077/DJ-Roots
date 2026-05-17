@@ -32,10 +32,10 @@ export default function QueueSection({
 
   return (
     <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 h-full">
+      <div className="flex h-full">
         
-        {/* LEFT COLUMN: QUEUE LIST */}
-        <div className="xl:col-span-8 flex flex-col h-full bg-zinc-950/40 border border-zinc-900/80 rounded-2xl p-6 relative overflow-hidden">
+        {/* QUEUE LIST */}
+        <div className="w-full flex flex-col h-full bg-zinc-950/40 border border-zinc-900/80 rounded-2xl p-6 relative overflow-hidden">
           
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -181,40 +181,7 @@ export default function QueueSection({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: SIDEBAR */}
-        <div className="xl:col-span-4 flex flex-col gap-5 h-full overflow-y-auto no-scrollbar">
-          
-          {/* NOW PLAYING CARD REMOVED */}
 
-          {/* VOTE TO SKIP CARD */}
-          <div className="bg-zinc-950/40 border border-zinc-900/80 rounded-2xl p-5 shadow-lg">
-            <h3 className="text-[10px] text-violet-400 font-bold uppercase tracking-widest mb-2">Vote to Skip</h3>
-            <p className="text-xs text-zinc-400 mb-4">Downvote to skip this song</p>
-            
-            <div className="h-2 w-full bg-zinc-900 rounded-full flex overflow-hidden mb-4 border border-zinc-800">
-              <div className="bg-emerald-500 h-full transition-all" style={{ width: `${(skipUpvotes / (skipUpvotes + skipDownvotes || 1)) * 100}%` }}></div>
-              <div className="bg-rose-500 h-full transition-all" style={{ width: `${(skipDownvotes / (skipUpvotes + skipDownvotes || 1)) * 100}%` }}></div>
-            </div>
-            
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ThumbsUp className="w-4 h-4 text-emerald-500" />
-                <span className="hud-font text-emerald-500 text-sm font-bold">{skipUpvotes}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="hud-font text-rose-500 text-sm font-bold">{skipDownvotes}</span>
-                <ThumbsDown className="w-4 h-4 text-rose-500" />
-              </div>
-            </div>
-            
-            <div className="text-[10px] text-zinc-500 font-medium">
-              Need {Math.max(0, skipThreshold - skipDownvotes)} more downvotes to skip
-            </div>
-          </div>
-
-          {/* UP NEXT AND QUEUE ACTIONS CARDS REMOVED */}
-
-        </div>
       </div>
     </main>
   );
