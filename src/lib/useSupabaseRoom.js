@@ -28,6 +28,7 @@ function extractYouTubeVideoIdFromImage(imgUrl) {
 function transformQueueItem(item) {
   const song = item.song || {};
   const adder = item.adder || {};
+  // Prefer the stored DB columns; fall back to image-URL extraction for legacy rows
   const youtubeVideoId = song.youtube_video_id || extractYouTubeVideoIdFromImage(song.img_url);
   const isYouTubeTrack = song.source === 'youtube' || Boolean(youtubeVideoId);
 
@@ -44,11 +45,12 @@ function transformQueueItem(item) {
     votes: item.votes || 0,
     addedBy: adder.name || 'Unknown',
     userAvatar: adder.avatar_url || '',
-    source: isYouTubeTrack ? 'youtube' : song.source || 'catalog',
+    source: isYouTubeTrack ? 'youtube' : (song.source || 'catalog'),
     youtubeVideoId: youtubeVideoId || null,
     embedUrl: song.embed_url || (youtubeVideoId ? buildEmbedUrl(youtubeVideoId) : ''),
   };
 }
+
 
 /**
  * Transforms room_members rows into the shape PeopleSection expects.

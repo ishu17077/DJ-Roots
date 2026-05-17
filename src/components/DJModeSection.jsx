@@ -74,6 +74,7 @@ export default function DJModeSection({
             muted
           />
 
+          {/* Gesture space — always shown when webcam is off */}
           <div className={`absolute inset-0 flex flex-col items-center justify-center text-center transition-opacity duration-300 ${webcamActive ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.06)_0%,transparent_65%)]"></div>
             <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#1e1e2f 1px, transparent 1px), linear-gradient(90deg, #1e1e2f 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -85,8 +86,8 @@ export default function DJModeSection({
                   <Headphones className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h3 className="text-sm font-bold tracking-widest text-zinc-300 uppercase">Gesture Space Virtual Room</h3>
-              <p className="text-[10px] text-zinc-500 mt-1 max-w-sm mx-auto">Click and drag across this dark canvas to generate expanding neon ripple chords.</p>
+              <h3 className="text-sm font-bold tracking-widest text-zinc-300 uppercase">Gesture Space — Enable Camera to Begin</h3>
+              <p className="text-[10px] text-zinc-500 mt-1 max-w-sm mx-auto">Enable the AI Camera Tracker above to control DJ actions with hand gestures.</p>
             </div>
           </div>
 
