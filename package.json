@@ -12,9 +12,13 @@
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.35",
     "@supabase/supabase-js": "^2.105.4",
+    "gsap": "^3.15.0",
     "lucide-react": "^1.16.0",
+    "ogl": "^1.0.11",
+    "postprocessing": "^6.39.1",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

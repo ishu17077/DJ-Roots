@@ -8,6 +8,7 @@ import PeopleSection from './components/PeopleSection.jsx';
 import SettingsSection from './components/SettingsSection.jsx';
 import LobbyScreen from './components/LobbyScreen.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
+import LandingPage from './components/LandingPage.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 import { supabase } from './lib/supabase.js';
 import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
@@ -331,6 +332,8 @@ const FALLBACK_QUEUE = [
 ];
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState(true);
+
   // --- AUTH STATE (persisted to localStorage for refresh survival) ---
   const [authUser, setAuthUser] = useState(() => {
     try {
@@ -383,6 +386,15 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  const handleGetStarted = () => {
+    setShowLanding(false);
+  };
+
+  // Show landing page if they haven't bypassed it yet
+  if (showLanding && !authUser) {
+    return <LandingPage onGetStarted={handleGetStarted} />;
   }
 
   // Must be authenticated — show login

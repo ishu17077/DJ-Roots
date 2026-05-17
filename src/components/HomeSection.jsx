@@ -6,7 +6,11 @@ import {
     Clock,
     MoreVertical
 } from './icons.jsx';
+<<<<<<< Updated upstream
 import { getYouTubeStreamUrl } from '../lib/youtubeStreamService.js';
+=======
+import ElectricBorder from './ElectricBorder.jsx';
+>>>>>>> Stashed changes
 
 export default function HomeSection({
     currentTrack,
@@ -54,6 +58,7 @@ export default function HomeSection({
                 style={{ backgroundImage: `url(${currentTrack?.img || ''})`, backgroundPosition: 'center', backgroundSize: 'cover' }}
             />
 
+<<<<<<< Updated upstream
             <section className="relative z-10 flex flex-col p-6 lg:p-10 h-full">
                 {/* Top Header inside the main view to match "DJ ROOTS" and right icons */}
                 <div className="flex items-center justify-between w-full mb-4 lg:mb-8 shrink-0 relative z-20">
@@ -75,6 +80,45 @@ export default function HomeSection({
                         </button>
                     </div>
                 </div>
+=======
+          {/* Content split */}
+          <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10">
+              
+              {/* Left Side: Vinyl */}
+              <div className="w-full lg:w-1/2 flex items-center justify-center relative h-full min-h-0 shrink-1">
+                 {/* Responsive vinyl sizing container */}
+                 <div className="relative flex items-center justify-center w-[clamp(250px,50vh,460px)] h-[clamp(250px,50vh,460px)] shrink-0">
+                     <ElectricBorder color="#d946ef" speed={1.5} chaos={0.12} style={{ borderRadius: '9999px' }} className="w-full h-full">
+                         {/* Neon Glow behind vinyl */}
+                         <div className="absolute inset-0 bg-fuchsia-600/30 blur-[60px] lg:blur-[80px] rounded-full pointer-events-none scale-90"></div>
+                         
+                         <div className={`relative w-full h-full rounded-full bg-[radial-gradient(circle,_#1a1a1a_0%,_#000000_100%)] flex items-center justify-center shadow-[0_0_80px_rgba(0,0,0,0.8)] ring-1 ring-white/5 ${isPlaying ? 'animate-[spin_4s_linear_infinite]' : ''}`}>
+                            {/* Vinyl Grooves with metallic reflection */}
+                            <div className="absolute inset-[2%] border border-white/5 rounded-full"></div>
+                            <div className="absolute inset-[6%] border border-white/5 rounded-full"></div>
+                            <div className="absolute inset-[12%] border border-white/10 rounded-full shadow-[inset_0_0_20px_rgba(255,255,255,0.02)]"></div>
+                            <div className="absolute inset-[18%] border border-white/5 rounded-full"></div>
+                            <div className="absolute inset-[26%] border border-white/10 rounded-full"></div>
+                            <div className="absolute inset-[32%] border border-white/5 rounded-full"></div>
+                            
+                            {/* Lighting / Specular highlights on vinyl */}
+                            <div className="absolute inset-0 rounded-full shadow-[inset_30px_-20px_60px_rgba(217,70,239,0.3)] mix-blend-screen pointer-events-none"></div>
+                            <div className="absolute inset-0 rounded-full shadow-[inset_-20px_30px_50px_rgba(255,255,255,0.05)] mix-blend-screen pointer-events-none"></div>
+
+                            {/* Center Label */}
+                            <div className="relative w-[34%] h-[34%] bg-[#080214] rounded-full z-10 flex flex-col items-center justify-center border border-fuchsia-900/40 shadow-[0_0_30px_rgba(0,0,0,1)]">
+                                <Activity className="w-[30%] h-[30%] text-fuchsia-400 mb-[2%] drop-shadow-[0_0_8px_rgba(217,70,239,0.8)]" />
+                                <span className="text-white text-[clamp(8px,1.2vw,12px)] font-black tracking-widest mt-[2%]">DJ ROOTS</span>
+                                <span className="text-zinc-500 text-[clamp(4px,0.6vw,6px)] uppercase tracking-widest mt-[2%] font-bold">Crowd Vibes. You Control.</span>
+                                
+                                {/* Spindle hole */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[6%] h-[6%] bg-zinc-950 rounded-full border border-black shadow-[inset_0_2px_4px_rgba(0,0,0,1)] ring-1 ring-white/10"></div>
+                            </div>
+                         </div>
+                     </ElectricBorder>
+                 </div>
+              </div>
+>>>>>>> Stashed changes
 
                 {/* Content split */}
                 <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10">
