@@ -13,6 +13,14 @@ import {
   subscribeToMembers,
   subscribeToRoom,
 } from './supabaseService.js';
+import { buildEmbedUrl } from './youtubeService.js';
+
+function extractYouTubeVideoIdFromImage(imgUrl) {
+  if (!imgUrl) return null;
+
+  const match = imgUrl.match(/\/(?:vi|vi_webp)\/([a-zA-Z0-9_-]{11})\//);
+  return match ? match[1] : null;
+}
 
 /**
  * Transforms raw queue_items (with joins) into the flat shape that App.jsx expects.
@@ -20,6 +28,9 @@ import {
 function transformQueueItem(item) {
   const song = item.song || {};
   const adder = item.adder || {};
+  const youtubeVideoId = song.youtube_video_id || extractYouTubeVideoIdFromImage(song.img_url);
+  const isYouTubeTrack = song.source === 'youtube' || Boolean(youtubeVideoId);
+
   return {
     id: item.id,
     songId: song.id,
@@ -33,6 +44,9 @@ function transformQueueItem(item) {
     votes: item.votes || 0,
     addedBy: adder.name || 'Unknown',
     userAvatar: adder.avatar_url || '',
+    source: isYouTubeTrack ? 'youtube' : song.source || 'catalog',
+    youtubeVideoId: youtubeVideoId || null,
+    embedUrl: song.embed_url || (youtubeVideoId ? buildEmbedUrl(youtubeVideoId) : ''),
   };
 }
 
