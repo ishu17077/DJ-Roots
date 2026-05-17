@@ -526,6 +526,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // Track the user's local votes: { [song_id]: 1 | -1 }
   const [userVotes, setUserVotes] = useState({});
 
+  // Is the current user the HOST of the active room?
+  const isHost = !activeRoomCode || !supabaseRoom
+    ? true   // offline mode — full control
+    : (userProfile?.id === supabaseRoom?.host_id);
 
   const [offlineQueue, setOfflineQueue] = useState(() => FALLBACK_QUEUE);
 
@@ -1127,31 +1131,6 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       }
     };
   }, [isPlaying, currentTrack, isShuffle]);
-
-  // ── REALTIME ROOM SYNC ──────────────────────────────────────────────────────
-  // When Supabase broadcasts a room change (from any user), apply it locally.
-  // This is what makes play/pause and track changes collaborative.
-  const lastSyncedRoomRef = useRef({ is_playing: null, current_track_id: null });
-  useEffect(() => {
-    if (!supabaseRoom || !activeRoomCode) return;
-
-    // Sync is_playing
-    if (supabaseRoom.is_playing !== lastSyncedRoomRef.current.is_playing) {
-      lastSyncedRoomRef.current.is_playing = supabaseRoom.is_playing;
-      setIsPlaying(supabaseRoom.is_playing);
-    }
-
-    // Sync current_track_id → find the matching index in the local queue
-    if (supabaseRoom.current_track_id &&
-      supabaseRoom.current_track_id !== lastSyncedRoomRef.current.current_track_id) {
-      lastSyncedRoomRef.current.current_track_id = supabaseRoom.current_track_id;
-      const idx = queueList.findIndex(t => t.id === supabaseRoom.current_track_id);
-      if (idx !== -1) {
-        setCurrentTrackIndex(idx);
-        setAudioElapsedSeconds(0);
-      }
-    }
-  }, [supabaseRoom, activeRoomCode, queueList]);
 
   // Handle Web Audio Sequencer arpeggiator
   useEffect(() => {
