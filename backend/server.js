@@ -56,7 +56,18 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
     }
 
     if (cookiesPath && fs.existsSync(cookiesPath)) {
-      dlOptions.cookies = cookiesPath;
+      // yt-dlp attempts to write back to the cookies file to keep session tokens fresh.
+      // Since /etc/secrets/ is a read-only file system, we must provide a writable copy.
+      const writableCookiesPath = path.join(require('os').tmpdir(), 'yt_cookies.txt');
+      try {
+        if (!fs.existsSync(writableCookiesPath)) {
+          fs.copyFileSync(cookiesPath, writableCookiesPath);
+        }
+        dlOptions.cookies = writableCookiesPath;
+      } catch (err) {
+        console.error('Failed to copy cookies to writable path:', err);
+        dlOptions.cookies = cookiesPath;
+      }
     }
 
     // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
