@@ -1346,7 +1346,14 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           </div>
         </aside >
 
-        {activeView === 'home' ? (
+        {/* HomeSection is ALWAYS mounted so the <audio> element persists across navigation.
+             We toggle display:flex/none instead of unmounting to keep the music alive. */}
+        <div style={{
+          display: activeView === 'home' ? 'flex' : 'none',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}>
           <HomeSection
             currentTrack={currentTrack}
             audioElapsedSeconds={audioElapsedSeconds}
@@ -1378,8 +1385,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             onTimeUpdate={(t) => setAudioElapsedSeconds(Math.floor(t))}
             onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
           />
-        ) : null
-        }
+        </div>
 
         {
           activeView === 'add-song' ? (

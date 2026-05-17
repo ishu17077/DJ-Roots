@@ -22,11 +22,18 @@ export default function YouTubeAudioPlayer({
   showControls = true,
 }) {
   const audioRef = useRef(null);
+  const retryCountRef = useRef(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+
+  // Reset retry counter and error state when a new stream URL arrives
+  useEffect(() => {
+    retryCountRef.current = 0;
+    setError(null);
+  }, [streamUrl]);
 
   // Register seek function so parent (App.jsx) can seek the real audio element
   useEffect(() => {
@@ -77,11 +84,23 @@ export default function YouTubeAudioPlayer({
     onEnded();
   };
 
-  // Handle error
+  // Handle error — retry up to 3 times before showing the error UI
   const handleError = (e) => {
     console.error('Audio element error:', e);
-    setError('Failed to load audio stream');
-    onError(e);
+    if (retryCountRef.current < 3) {
+      retryCountRef.current++;
+      const delay = retryCountRef.current * 2000; // 2s, 4s, 6s
+      console.log(`Retrying audio stream (attempt ${retryCountRef.current}) in ${delay}ms...`);
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.load();
+          if (isPlaying) audioRef.current.play().catch(() => {});
+        }
+      }, delay);
+    } else {
+      setError('Failed to load audio stream');
+      onError(e);
+    }
   };
 
   // Handle loading
