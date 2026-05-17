@@ -347,7 +347,7 @@ export async function fetchSongCatalog() {
  */
 export function subscribeToQueue(roomId, onQueueChange) {
   const channel = supabase
-    .channel(`queue-${roomId}`)
+    .channel(`queue-${roomId}-${Math.random().toString(36).substring(7)}`)
     .on(
       'postgres_changes',
       {
@@ -371,7 +371,7 @@ export function subscribeToQueue(roomId, onQueueChange) {
  */
 export function subscribeToMembers(roomId, onMembersChange) {
   const channel = supabase
-    .channel(`members-${roomId}`)
+    .channel(`members-${roomId}-${Math.random().toString(36).substring(7)}`)
     .on(
       'postgres_changes',
       {
@@ -395,7 +395,7 @@ export function subscribeToMembers(roomId, onMembersChange) {
  */
 export function subscribeToRoom(roomId, onRoomChange) {
   const channel = supabase
-    .channel(`room-${roomId}`)
+    .channel(`room-${roomId}-${Math.random().toString(36).substring(7)}`)
     .on(
       'postgres_changes',
       {

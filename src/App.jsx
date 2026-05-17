@@ -539,7 +539,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
 
   const currentTrack = useMemo(() => {
-    const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: '', userAvatar: '' };
+    const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: null, userAvatar: null };
     if (activeRoomCode && supabaseRoom) {
       return queueList.find(t => t.id === supabaseRoom.current_track_id) || fallback;
     }
