@@ -16,7 +16,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (youtube-dl-exec will download the yt-dlp binary during post-install)
+# Skip youtube-dl-exec post-install download (since we manually installed yt-dlp)
+ENV YOUTUBE_DL_SKIP_DOWNLOAD=true
+
+# Install dependencies
 RUN npm install
 
 # Copy application code
