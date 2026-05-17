@@ -17,6 +17,7 @@ export default function YouTubeAudioPlayer({
   onTimeUpdate = () => { },
   onEnded = () => { },
   onError = () => { },
+  onRegisterSeek = () => { },
   autoplay = false,
   showControls = true,
 }) {
@@ -26,6 +27,17 @@ export default function YouTubeAudioPlayer({
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+
+  // Register seek function so parent (App.jsx) can seek the real audio element
+  useEffect(() => {
+    onRegisterSeek((seconds) => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = seconds;
+      }
+    });
+    // Cleanup: unregister on unmount
+    return () => onRegisterSeek(null);
+  }, [onRegisterSeek]);
 
   // Auto-play when isPlaying prop changes
   useEffect(() => {

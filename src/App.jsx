@@ -521,6 +521,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const recognizerRef = useRef(null);
   const requestRef = useRef(null);
   const lastGestureTimeRef = useRef(0);
+  // Ref to the YouTube audio element's seek function — set by YouTubeAudioPlayer via HomeSection
+  const youtubeSeekRef = useRef(null);
 
   // Track the user's local votes: { [song_id]: 1 | -1 }
   const [userVotes, setUserVotes] = useState({});
@@ -990,14 +992,23 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     const clickPct = (e.clientX - rect.left) / rect.width;
     const newSeconds = Math.floor(clickPct * currentTrack.duration);
     setAudioElapsedSeconds(newSeconds);
-    triggerOscillatorTone(currentTrack.pitch * 1.3, 0.25, 'triangle');
+    // If a YouTube track is playing, also seek the real audio element
+    if (currentTrack?.source === 'youtube' && youtubeSeekRef.current) {
+      youtubeSeekRef.current(newSeconds);
+    } else {
+      triggerOscillatorTone(currentTrack.pitch * 1.3, 0.25, 'triangle');
+    }
   };
 
   // --- COMPONENT LIFECYCLE EFFECTS ---
 
   // Handle Playback Progress & DJ Timer Countdown
   useEffect(() => {
-    if (isPlaying) {
+    // For YouTube tracks the real audio element fires onTimeUpdate -> setAudioElapsedSeconds
+    // So we do NOT run the fake interval for YouTube tracks
+    const isYouTube = currentTrack?.source === 'youtube';
+
+    if (isPlaying && !isYouTube) {
       playbackIntervalRef.current = setInterval(() => {
         setAudioElapsedSeconds(prev => {
           if (prev < currentTrack.duration) {
@@ -1364,6 +1375,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             activeRoomCode={activeRoomCode}
             onJoinRoom={handleJoinRoom}
             authDisplayName={authDisplayName}
+            onTimeUpdate={(t) => setAudioElapsedSeconds(Math.floor(t))}
+            onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
           />
         ) : null
         }
