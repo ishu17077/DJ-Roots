@@ -1,13 +1,12 @@
 # Use Node 24 (Bookworm) as base image to ensure Python >= 3.11 for yt-dlp
 FROM node:24-bookworm-slim
 
-# Install Python 3, FFmpeg, and curl, then explicitly download yt-dlp globally
+# Install Python 3, pip, and FFmpeg, then install yt-dlp via pip
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-pip \
     ffmpeg \
-    curl \
-    && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp \
+    && pip3 install --no-cache-dir --break-system-packages yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
