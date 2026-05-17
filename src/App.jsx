@@ -540,7 +540,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
   // --- DERIVED MEMO STATES ---
-  const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
+  // const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
 
   const currentTrack = useMemo(() => {
     if (activeRoomCode && supabaseRoom) {
@@ -967,13 +967,13 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               lastGestureTimeRef.current = nowInMs;
               const fn = simulateGestureRef.current;
               if (!fn) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
-              if (gestureName === 'Thumb_Up')    fn('swiperight');
-              else if (gestureName === 'Thumb_Down')  fn('swipeleft');
+              if (gestureName === 'Thumb_Up') fn('swiperight');
+              else if (gestureName === 'Thumb_Down') fn('swipeleft');
               else if (gestureName === 'Closed_Fist') fn('fist');
-              else if (gestureName === 'Open_Palm')   fn('palmup');
+              else if (gestureName === 'Open_Palm') fn('palmup');
               else if (gestureName === 'Pointing_Up') fn('palmdown');
-              else if (gestureName === 'Victory')     fn('swiperight');
-              else if (gestureName === 'ILoveYou')    fn('palmup');
+              else if (gestureName === 'Victory') fn('swiperight');
+              else if (gestureName === 'ILoveYou') fn('palmup');
             }
           }
         }
@@ -1047,7 +1047,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     if (supabaseConnected) {
       supabaseAddSong(newSong);
     }
-    
+
     setQueueList(prev => [...prev, newSong]);
     setShowAddModal(false);
     addToast('Track Appended', `"${title}" has been added to the queue list.`);
@@ -1141,7 +1141,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
     // Sync current_track_id → find the matching index in the local queue
     if (supabaseRoom.current_track_id &&
-        supabaseRoom.current_track_id !== lastSyncedRoomRef.current.current_track_id) {
+      supabaseRoom.current_track_id !== lastSyncedRoomRef.current.current_track_id) {
       lastSyncedRoomRef.current.current_track_id = supabaseRoom.current_track_id;
       const idx = queueList.findIndex(t => t.id === supabaseRoom.current_track_id);
       if (idx !== -1) {
