@@ -10,8 +10,10 @@ export default function YouTubeAudioPlayer({
   videoId,
   title,
   duration,
+  streamUrl,
   isPlaying = false,
   isMuted = false,
+  onMuteChange = () => { },
   onPlay = () => { },
   onPause = () => { },
   onTimeUpdate = () => { },
@@ -23,6 +25,7 @@ export default function YouTubeAudioPlayer({
 }) {
   const playerRef = useRef(null);
   const containerRef = useRef(null);
+  const fallbackAudioRef = useRef(null);
   const progressInterval = useRef(null);
   
   const [isReady, setIsReady] = useState(false);
@@ -30,8 +33,13 @@ export default function YouTubeAudioPlayer({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [volume, setVolume] = useState(1);
-  const [blobUrl, setBlobUrl] = useState(null);
-  const [isBlobFallback, setIsBlobFallback] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+
+  // Use refs for callbacks to avoid stale closures in YT player events
+  const callbacksRef = useRef({ onPlay, onPause, onEnded, onError, onTimeUpdate });
+  useEffect(() => {
+    callbacksRef.current = { onPlay, onPause, onEnded, onError, onTimeUpdate };
+  }, [onPlay, onPause, onEnded, onError, onTimeUpdate]);
 
   // Initialize YouTube IFrame API
   useEffect(() => {
@@ -63,13 +71,13 @@ export default function YouTubeAudioPlayer({
             const YT = window.YT;
             if (event.data === YT.PlayerState.PLAYING) {
               setIsLoading(false);
-              onPlay();
+              callbacksRef.current.onPlay();
               startProgressInterval();
             } else if (event.data === YT.PlayerState.PAUSED) {
-              onPause();
+              callbacksRef.current.onPause();
               stopProgressInterval();
             } else if (event.data === YT.PlayerState.ENDED) {
-              onEnded();
+              callbacksRef.current.onEnded();
               stopProgressInterval();
             } else if (event.data === YT.PlayerState.BUFFERING) {
               setIsLoading(true);
@@ -77,8 +85,13 @@ export default function YouTubeAudioPlayer({
           },
           onError: (event) => {
             console.error('YouTube Player Error:', event.data);
-            setError('Failed to load track from YouTube.');
-            onError(event.data);
+            // If error is 101 or 150 (embed restricted), fallback to proxy
+            if (event.data === 101 || event.data === 150 || event.data === 2) {
+              setUseFallback(true);
+            } else {
+              setError('Failed to load track from YouTube.');
+              callbacksRef.current.onError(event.data);
+            }
           }
         }
       });
@@ -106,18 +119,30 @@ export default function YouTubeAudioPlayer({
 
   // Sync videoId
   useEffect(() => {
+    setUseFallback(false);
+    setError(null);
     if (playerRef.current && isReady && playerRef.current.loadVideoById) {
       setIsLoading(true);
-      setError(null);
       playerRef.current.loadVideoById(videoId);
       if (!isPlaying) {
         playerRef.current.pauseVideo();
       }
     }
-  }, [videoId, isReady]); // isPlaying is handled below
+  }, [videoId, isReady]);
 
   // Sync play/pause state
   useEffect(() => {
+    if (useFallback) {
+      if (fallbackAudioRef.current) {
+        if (isPlaying) {
+          fallbackAudioRef.current.play().catch(e => console.error('Fallback play error:', e));
+        } else {
+          fallbackAudioRef.current.pause();
+        }
+      }
+      return;
+    }
+    
     if (playerRef.current && isReady) {
       if (isPlaying) {
         playerRef.current.playVideo();
@@ -125,38 +150,61 @@ export default function YouTubeAudioPlayer({
         playerRef.current.pauseVideo();
       }
     }
-  }, [isPlaying, isReady]);
+  }, [isPlaying, isReady, useFallback]);
 
   // Expose Seek Function
   useEffect(() => {
     onRegisterSeek((seconds) => {
-      if (playerRef.current && isReady && typeof playerRef.current.seekTo === 'function') {
+      if (useFallback && fallbackAudioRef.current) {
+        fallbackAudioRef.current.currentTime = seconds;
+        setCurrentTime(seconds);
+      } else if (playerRef.current && isReady && typeof playerRef.current.seekTo === 'function') {
         playerRef.current.seekTo(seconds, true);
         setCurrentTime(seconds);
       }
     });
     return () => onRegisterSeek(null);
-  }, [onRegisterSeek, isReady]);
+  }, [onRegisterSeek, isReady, useFallback]);
 
   // Expose Volume Function
   useEffect(() => {
     onRegisterVolume((vol) => {
       const newVol = Math.max(0, Math.min(100, vol * 100));
-      if (playerRef.current && isReady && typeof playerRef.current.setVolume === 'function') {
+      if (useFallback && fallbackAudioRef.current) {
+        fallbackAudioRef.current.volume = Math.max(0, Math.min(1, vol));
+      } else if (playerRef.current && isReady && typeof playerRef.current.setVolume === 'function') {
         playerRef.current.setVolume(newVol);
       }
     });
     return () => onRegisterVolume(null);
-  }, [onRegisterVolume, isReady]);
+  }, [onRegisterVolume, isReady, useFallback]);
 
-  // Interval for Time updates
+  // Sync mute state with prop
+  useEffect(() => {
+    if (useFallback) {
+      if (fallbackAudioRef.current) {
+        fallbackAudioRef.current.muted = isMuted;
+      }
+      return;
+    }
+    
+    if (playerRef.current && isReady) {
+      if (isMuted) {
+        if (typeof playerRef.current.mute === 'function') playerRef.current.mute();
+      } else {
+        if (typeof playerRef.current.unMute === 'function') playerRef.current.unMute();
+      }
+    }
+  }, [isMuted, isReady, useFallback]);
+
+  // Interval for Time updates (IFrame)
   function startProgressInterval() {
     if (progressInterval.current) clearInterval(progressInterval.current);
     progressInterval.current = setInterval(() => {
       if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
         const time = playerRef.current.getCurrentTime();
         setCurrentTime(time);
-        onTimeUpdate(time);
+        callbacksRef.current.onTimeUpdate(time);
       }
     }, 250);
   }
@@ -168,99 +216,9 @@ export default function YouTubeAudioPlayer({
     }
   }
 
-  // Update progress
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      onTimeUpdate(audioRef.current.currentTime);
-    }
-  };
-
-  // Handle play
-  const handlePlay = () => {
-    onPlay();
-  };
-
-  // Handle pause
-  const handlePause = () => {
-    onPause();
-  };
-
-  // Handle ended
-  const handleEnded = () => {
-    onEnded();
-  };
-
-  // Handle error — retry up to 3 times before showing the error UI
-  const fetchStreamAsBlob = async (url) => {
-    const response = await fetch(url, {
-      headers: {
-        'ngrok-skip-browser-warning': '000',
-      },
-      mode: 'cors',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Stream fetch failed (${response.status})`);
-    }
-
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    setBlobUrl(objectUrl);
-    setIsBlobFallback(true);
-
-    if (audioRef.current) {
-      audioRef.current.src = objectUrl;
-      audioRef.current.load();
-      if (isPlaying) audioRef.current.play().catch(() => { });
-    }
-
-    return objectUrl;
-  };
-
-  const handleError = async (e) => {
-    console.error('Audio element error:', e);
-
-    if (!isBlobFallback && streamUrl) {
-      try {
-        setError(null);
-        await fetchStreamAsBlob(streamUrl);
-        return;
-      } catch (fetchError) {
-        console.warn('Blob fallback failed:', fetchError);
-      }
-    }
-
-    if (retryCountRef.current < 3) {
-      retryCountRef.current++;
-      const delay = retryCountRef.current * 2000; // 2s, 4s, 6s
-      console.log(`Retrying audio stream (attempt ${retryCountRef.current}) in ${delay}ms...`);
-      setTimeout(() => {
-        if (audioRef.current) {
-          audioRef.current.load();
-          if (isPlaying) audioRef.current.play().catch(() => { });
-        }
-      }, delay);
-    } else {
-      setError('Failed to load audio stream');
-      onError(e);
-    }
-  };
-
-  // Handle loading
-  const handleLoadStart = () => {
-    setIsLoading(true);
-  };
-
-  const handleCanPlay = () => {
-    setIsLoading(false);
-  };
-
-  // Toggle mute
+  // Local Controls
   const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !audioRef.current.muted;
-    }
+    onMuteChange(!isMuted);
   };
 
   const handleVolumeChange = (e) => {
@@ -269,8 +227,7 @@ export default function YouTubeAudioPlayer({
     if (playerRef.current && isReady) {
       playerRef.current.setVolume(newVolume * 100);
       if (newVolume > 0 && isMuted) {
-        playerRef.current.unMute();
-        setIsMuted(false);
+        onMuteChange(false);
       }
     }
   };
@@ -291,106 +248,44 @@ export default function YouTubeAudioPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  return (
-    <div className="w-full space-y-3">
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        src={isBlobFallback && blobUrl ? blobUrl : streamUrl}
-        crossOrigin="anonymous"
-        muted={isMuted}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        onError={handleError}
-        onLoadStart={handleLoadStart}
-        onCanPlay={handleCanPlay}
-      />
-
-      {/* Player UI */}
-      <div className="bg-gradient-to-b from-zinc-900/80 to-zinc-950/80 border border-zinc-800/60 rounded-lg p-4 backdrop-blur">
-        {/* Title */}
-        <h4 className="text-xs font-bold text-white truncate mb-3">{title || 'Playing...'}</h4>
-
-        {/* Progress Bar */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] text-zinc-400">{formatTime(currentTime)}</span>
-          <div
-            className="flex-1 h-1 bg-zinc-800 rounded-full cursor-pointer group hover:h-1.5 transition-all"
-            onClick={handleProgressClick}
-          >
-            <div
-              className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-400 rounded-full"
-              style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-            >
-              <div className="float-right h-full w-3 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity -translate-y-1" />
-            </div>
-          </div>
-          <span className="text-[10px] text-zinc-400">{formatTime(duration)}</span>
-        </div>
-
-        {/* Controls */}
-        {showControls && (
-          <div className="flex items-center justify-between">
-            {/* Play/Pause Button */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (audioRef.current) {
-                    if (isPlaying) {
-                      audioRef.current.pause();
-                    } else {
-                      audioRef.current.play();
-                    }
-                  }
-                }}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-600 hover:bg-violet-500 transition-colors text-white"
-                title={isPlaying ? 'Pause' : 'Play'}
-              >
-                {isLoading ? (
-                  <div className="animate-spin">
-                    <div className="w-4 h-4 border border-white border-t-transparent rounded-full" />
-                  </div>
-                ) : isPlaying ? (
-                  <Pause className="w-4 h-4" />
-                ) : (
-                  <Play className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-
-            {/* Volume Controls */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleMute}
-                className="text-zinc-400 hover:text-white transition-colors"
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? (
-                  <VolumeX className="w-4 h-4" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
-                )}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-16 h-1 bg-zinc-800 rounded-full cursor-pointer accent-violet-500"
-                title="Volume"
-              />
-            </div>
-          </div>
+  if (!showControls) {
+    return (
+      <div className="fixed -top-[2000px] -left-[2000px] w-[200px] h-[200px] opacity-1 pointer-events-none z-0">
+        <div ref={containerRef} />
+        {useFallback && streamUrl && (
+          <audio
+            ref={fallbackAudioRef}
+            src={streamUrl}
+            onPlay={callbacksRef.current.onPlay}
+            onPause={callbacksRef.current.onPause}
+            onEnded={callbacksRef.current.onEnded}
+            onTimeUpdate={(e) => callbacksRef.current.onTimeUpdate(e.target.currentTime)}
+            onError={(e) => {
+              console.error("Fallback audio error:", e);
+              callbacksRef.current.onError(e);
+            }}
+          />
         )}
+      </div>
+    );
+  }
 
-        {/* Status */}
-        <div className="text-[9px] text-zinc-500 mt-2">
-          ✓ Audio streaming {isPlaying ? '• Playing' : isLoading ? '• Loading...' : ''}
-        </div>
+  return (
+    <div className="w-full space-y-3 relative">
+      {/* Invisible YouTube Player */}
+      <div className="fixed -top-[2000px] -left-[2000px] w-[200px] h-[200px] opacity-1 pointer-events-none z-0">
+        <div ref={containerRef} />
+        {useFallback && streamUrl && (
+          <audio
+            ref={fallbackAudioRef}
+            src={streamUrl}
+            onPlay={callbacksRef.current.onPlay}
+            onPause={callbacksRef.current.onPause}
+            onEnded={callbacksRef.current.onEnded}
+            onTimeUpdate={(e) => callbacksRef.current.onTimeUpdate(e.target.currentTime)}
+            onError={(e) => callbacksRef.current.onError(e)}
+          />
+        )}
       </div>
 
       {error ? (

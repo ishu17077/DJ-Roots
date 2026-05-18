@@ -547,6 +547,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
   // --- DERIVED MEMO STATES ---
+  
   const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
 
   const currentTrack = useMemo(() => {
@@ -564,11 +565,14 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       ? [...queueList].sort((a, b) => b.votes - a.votes)
       : [...queueList]; // Sequential order for Single Mode
       
+
+      
     return sorted.filter(song =>
       song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
     );
   }, [queueList, searchFilterText, activeRoomCode, supabaseRoom]);
+
 
   const upNextList = useMemo(() => {
     if (activeRoomCode && supabaseRoom) {
@@ -587,6 +591,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       return queueList.slice(currentIdx + 1, currentIdx + 4);
     }
   }, [queueList, currentTrack.id, activeRoomCode, supabaseRoom]);
+
 
   const filteredTrending = useMemo(() => {
     return TRENDING_POOL.filter(song =>
@@ -746,6 +751,23 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       return;
     }
     let target = currentIdx + 1;
+    if (target >= queueList.length) {
+      if (isRepeat) {
+        target = 0;
+        selectTrack(queueList[target].id);
+      } else {
+        // Stop playback at end of queue
+        if (activeRoomCode && supabaseRoom) {
+          supabaseUpdateRoom({ is_playing: false, current_track_id: null });
+        } else {
+          setLocalIsPlaying(false);
+          setCurrentTrackIndex(-1);
+          setAudioElapsedSeconds(0);
+        }
+      }
+    } else {
+      selectTrack(queueList[target].id);
+    }
     if (target >= queueList.length) {
       if (isRepeat) {
         target = 0;
@@ -1626,6 +1648,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               activeRoomCode={activeRoomCode}
               isHost={isHost}
               selectTrack={selectTrack}
+              
             />
           ) : null
         }
