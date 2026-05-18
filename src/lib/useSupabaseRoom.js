@@ -101,7 +101,9 @@ export function useSupabaseRoom(roomCode, userProfile) {
       return;
     }
 
+    let isMounted = true;
     let unsubQueue, unsubMembers, unsubRoom;
+    let pollInterval;
 
     const init = async () => {
       setLoading(true);
@@ -110,71 +112,74 @@ export function useSupabaseRoom(roomCode, userProfile) {
         const roomData = await fetchRoom(roomCode);
         if (!roomData) {
           console.warn('Room not found:', roomCode);
-          setLoading(false);
+          if (isMounted) setLoading(false);
           return;
         }
+        if (!isMounted) return;
         setRoom(roomData);
         roomIdRef.current = roomData.id;
 
         // 2. Fetch queue
         const queueData = await fetchQueue(roomData.id);
-        setQueueList(queueData.map(transformQueueItem));
+        if (isMounted) setQueueList(queueData.map(transformQueueItem));
 
         // 3. Fetch members
         const membersData = await fetchRoomMembers(roomData.id);
-        setMembers(membersData.map(transformMember));
+        if (isMounted) setMembers(membersData.map(transformMember));
 
         // 4. Fetch song catalog
         const catalog = await fetchSongCatalog();
-        setSongCatalog(catalog);
+        if (isMounted) setSongCatalog(catalog);
 
+        if (!isMounted) return;
         setConnected(true);
 
         // 5. Set up real-time subscriptions
         unsubQueue = subscribeToQueue(roomData.id, async () => {
+          if (!isMounted) return;
           const freshQueue = await fetchQueue(roomData.id);
-          setQueueList(freshQueue.map(transformQueueItem));
+          if (isMounted) setQueueList(freshQueue.map(transformQueueItem));
         });
 
         unsubMembers = subscribeToMembers(roomData.id, async () => {
+          if (!isMounted) return;
           const freshMembers = await fetchRoomMembers(roomData.id);
-          setMembers(freshMembers.map(transformMember));
+          if (isMounted) setMembers(freshMembers.map(transformMember));
         });
 
         unsubRoom = subscribeToRoom(roomData.id, (newRoom) => {
-          setRoom(newRoom);
+          if (isMounted) setRoom(newRoom);
         });
 
         // 6. Setup Polling Fallback (in case Realtime is not enabled in Supabase DB)
-        const pollInterval = setInterval(async () => {
-          if (!roomIdRef.current) return;
+        pollInterval = setInterval(async () => {
+          if (!roomIdRef.current || !isMounted) return;
           try {
             const freshRoom = await fetchRoom(roomCode);
-            if (freshRoom) setRoom(freshRoom);
+            if (freshRoom && isMounted) setRoom(freshRoom);
             
             const freshQueue = await fetchQueue(roomIdRef.current);
-            setQueueList(freshQueue.map(transformQueueItem));
+            if (isMounted) setQueueList(freshQueue.map(transformQueueItem));
           } catch (e) {
             console.error('Polling error:', e);
           }
         }, 3000);
-        
-        // Save pollInterval to clear it on unmount
-        window._djRootsPollInterval = pollInterval;
+
       } catch (err) {
         console.error('Supabase init error:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     init();
 
     return () => {
+      isMounted = false;
       if (unsubQueue) unsubQueue();
       if (unsubMembers) unsubMembers();
       if (unsubRoom) unsubRoom();
-      if (window._djRootsPollInterval) clearInterval(window._djRootsPollInterval);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [roomCode]);
 
