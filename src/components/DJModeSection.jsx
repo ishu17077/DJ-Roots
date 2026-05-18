@@ -30,6 +30,7 @@ export default function DJModeSection({
   setActiveView,
   queueList,
   toggleShuffle,
+  activeRoomCode,
 }) {
   return (
     <>
@@ -104,7 +105,7 @@ export default function DJModeSection({
             {[
               ['swiperight', '👍 Thumb Up', 'Next'],
               ['swipeleft', '👎 Thumb Down', 'Prev'],
-              ['fist', '✊ Closed Fist', 'Mute'],
+              ['fist', '✊ Closed Fist', 'Pause/Play'],
               ['palmup', '🖐️ Open Palm', 'Vol +'],
               ['palmdown', '☝️ Pointing Up', 'Vol -'],
             ].map(([type, icon, action]) => (
@@ -164,17 +165,21 @@ export default function DJModeSection({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`hud-font text-[9px] font-bold ${song.votes >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {song.votes >= 0 ? '+' : ''}{song.votes}
-                </span>
-                <div className="flex flex-col gap-0.5">
-                  <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, 1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-emerald-400 transition-colors">
-                    <ChevronUp className="w-3 h-3" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, -1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-red-400 transition-colors">
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                </div>
+                {activeRoomCode && (
+                  <>
+                    <span className={`hud-font text-[9px] font-bold ${song.votes >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {song.votes >= 0 ? '+' : ''}{song.votes}
+                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, 1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-emerald-400 transition-colors">
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, -1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-red-400 transition-colors">
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ))}
