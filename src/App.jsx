@@ -229,6 +229,14 @@ const Icon = ({ name, className = "w-4 h-4", ...props }) => {
           <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         </svg>
       );
+    case 'VolumeX':
+      return (
+        <svg {...baseSvgProps}>
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        </svg>
+      );
     case 'Share':
       return (
         <svg {...baseSvgProps}>
@@ -310,6 +318,7 @@ const Pause = (p) => <Icon name="Pause" {...p} />;
 const SkipForward = (p) => <Icon name="SkipForward" {...p} />;
 const Repeat = (p) => <Icon name="Repeat" {...p} />;
 const Volume2 = (p) => <Icon name="Volume2" {...p} />;
+const VolumeX = (p) => <Icon name="VolumeX" {...p} />;
 const Info = (p) => <Icon name="Info" {...p} />;
 const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
 
@@ -497,6 +506,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [toasts, setToasts] = useState([]);
   const [djTimerSeconds, setDjTimerSeconds] = useState(300);
   const [volume, setVolume] = useState(75);
+  const [isMuted, setIsMuted] = useState(true);
+  const [hasEntered, setHasEntered] = useState(false);
   const [waveformBars, setWaveformBars] = useState(new Array(45).fill(12));
   const [songLinkInput, setSongLinkInput] = useState('');
   const [isLoadingYutubeUrl, setIsLoadingYutubeUrl] = useState(false);
@@ -1208,7 +1219,35 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden select-none bg-[#030307] text-[#e4e4e7]">
+    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden select-none bg-[#030307] text-[#e4e4e7] relative">
+      
+      {/* ENTER WORLD OVERLAY */}
+      {!hasEntered && (
+        <div 
+          className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl cursor-pointer group"
+          onClick={() => {
+            setHasEntered(true);
+            setIsMuted(false);
+            if (activeRoomCode && !localIsPlaying) {
+               // Optional: ensure autoplay is triggered if they are in a room
+            }
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-violet-900/20 to-fuchsia-900/20 pointer-events-none" />
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-24 h-24 rounded-full bg-violet-600/20 border-2 border-violet-500/50 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-violet-600/40 group-hover:border-violet-400 transition-all duration-500 shadow-[0_0_50px_rgba(139,92,246,0.3)] group-hover:shadow-[0_0_80px_rgba(139,92,246,0.6)]">
+              <Play className="w-10 h-10 text-white ml-2 drop-shadow-lg" />
+            </div>
+            <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 tracking-tighter mb-4 drop-shadow-xl transform group-hover:scale-105 transition-transform duration-500">
+              ENTER DJ ROOTS
+            </h1>
+            <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm md:text-base animate-pulse">
+              Click anywhere to start the vibe
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* EXPLICIT STYLE INJECTIONS TO PREVENT UNSTYLED PREVIEWS */}
       <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
@@ -1449,6 +1488,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             adjustVolume={adjustVolume}
             waveformBars={waveformBars}
             isPlaying={isPlaying}
+            isMuted={isMuted}
             isShuffle={isShuffle}
             isRepeat={isRepeat}
             toggleShuffle={toggleShuffle}
@@ -1643,13 +1683,30 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
         {/* Volume Control */}
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0 pr-2 w-full">
-          <Volume2 className="w-4 h-4 text-zinc-500" />
+          {isMuted && (
+            <button
+              onClick={() => setIsMuted(false)}
+              className="px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+            >
+              Enter DJ
+            </button>
+          )}
+          <button
+             onClick={() => setIsMuted(!isMuted)}
+             className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
+             title={isMuted ? "Unmute" : "Mute"}
+          >
+             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
           <input
             type="range"
             min="0"
             max="100"
             value={volume}
-            onChange={(e) => adjustVolume(e.target.value)}
+            onChange={(e) => {
+              if (isMuted) setIsMuted(false);
+              adjustVolume(e.target.value);
+            }}
             className="w-24 accent-violet-500"
           />
         </div>

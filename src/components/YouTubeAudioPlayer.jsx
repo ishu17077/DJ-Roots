@@ -12,6 +12,7 @@ export default function YouTubeAudioPlayer({
   streamUrl,
   duration,
   isPlaying = false,
+  isMuted = false,
   onPlay = () => { },
   onPause = () => { },
   onTimeUpdate = () => { },
@@ -27,14 +28,25 @@ export default function YouTubeAudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [isBlobFallback, setIsBlobFallback] = useState(false);
 
   // Reset retry counter and error state when a new stream URL arrives
   useEffect(() => {
     retryCountRef.current = 0;
     setError(null);
+    setBlobUrl(null);
+    setIsBlobFallback(false);
   }, [streamUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
 
   // Register seek function so parent (App.jsx) can seek the real audio element
   useEffect(() => {
@@ -96,8 +108,45 @@ export default function YouTubeAudioPlayer({
   };
 
   // Handle error — retry up to 3 times before showing the error UI
-  const handleError = (e) => {
+  const fetchStreamAsBlob = async (url) => {
+    const response = await fetch(url, {
+      headers: {
+        'ngrok-skip-browser-warning': '000',
+      },
+      mode: 'cors',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Stream fetch failed (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    setBlobUrl(objectUrl);
+    setIsBlobFallback(true);
+
+    if (audioRef.current) {
+      audioRef.current.src = objectUrl;
+      audioRef.current.load();
+      if (isPlaying) audioRef.current.play().catch(() => { });
+    }
+
+    return objectUrl;
+  };
+
+  const handleError = async (e) => {
     console.error('Audio element error:', e);
+
+    if (!isBlobFallback && streamUrl) {
+      try {
+        setError(null);
+        await fetchStreamAsBlob(streamUrl);
+        return;
+      } catch (fetchError) {
+        console.warn('Blob fallback failed:', fetchError);
+      }
+    }
+
     if (retryCountRef.current < 3) {
       retryCountRef.current++;
       const delay = retryCountRef.current * 2000; // 2s, 4s, 6s
@@ -105,7 +154,7 @@ export default function YouTubeAudioPlayer({
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.load();
-          if (isPlaying) audioRef.current.play().catch(() => {});
+          if (isPlaying) audioRef.current.play().catch(() => { });
         }
       }, delay);
     } else {
@@ -127,7 +176,6 @@ export default function YouTubeAudioPlayer({
   const toggleMute = () => {
     if (audioRef.current) {
       audioRef.current.muted = !audioRef.current.muted;
-      setIsMuted(!isMuted);
     }
   };
 
@@ -188,7 +236,9 @@ export default function YouTubeAudioPlayer({
       {/* Hidden audio element */}
       <audio
         ref={audioRef}
-        src={streamUrl}
+        src={isBlobFallback && blobUrl ? blobUrl : streamUrl}
+        crossOrigin="anonymous"
+        muted={isMuted}
         onPlay={handlePlay}
         onPause={handlePause}
         onTimeUpdate={handleTimeUpdate}
