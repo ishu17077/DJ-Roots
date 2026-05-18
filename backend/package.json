@@ -14,11 +14,15 @@
   "type": "commonjs",
   "dependencies": {
     "axios": "^1.16.1",
+    "bgutils-js": "^3.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsdom": "^29.1.1",
+    "localtunnel": "^2.0.2",
+    "play-dl": "^1.9.7",
     "youtube-dl-exec": "^3.1.7",
-    "youtube-po-token-generator": "^0.6.0"
+    "youtube-po-token-generator": "^0.6.0",
+    "youtubei.js": "^17.0.1"
   }
 }

@@ -13,10 +13,28 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+// app.use(cors({
+//   // origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+//   // credentials: true
+//   origin: process.env.FRONTEND_URL,
+//   credentials: false,
+// }));
+
+const corsHosts = process.env.CORS_HOSTS?.split(",").map(h => h.trim()) ?? ["http://localhost:5173"]
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!corsHosts || !origin || corsHosts.includes(origin)) {
+      callback(null, origin || "*")
+    } else {
+      callback(new Error("fekfjekf"))
+    }
+  },
+  methods: [],
+  credentials: true,
+}
+
+app.use(cors(corsOptions))
+
 app.use(express.json());
 
 /**
@@ -28,7 +46,7 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
   const {
     videoId
   } = req.params;
-
+  console.log("HIT")
   if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
     return res.status(400).json({
       error: 'Invalid video ID'
@@ -50,29 +68,29 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
     // Use cookies if the file exists to bypass YouTube bot detection
     // Render mounts Secret Files in Docker at /etc/secrets/
 
-    /*
-    let cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
-    if (!cookiesPath && fs.existsSync('/etc/secrets/cookies.txt')) {
-      cookiesPath = '/etc/secrets/cookies.txt';
-    } else if (!cookiesPath && fs.existsSync(path.join(__dirname, 'cookies.txt'))) {
-      cookiesPath = path.join(__dirname, 'cookies.txt');
-    }
 
-    if (cookiesPath && fs.existsSync(cookiesPath)) {
-      // yt-dlp attempts to write back to the cookies file to keep session tokens fresh.
-      // Since /etc/secrets/ is a read-only file system, we must provide a writable copy.
-      const writableCookiesPath = path.join(require('os').tmpdir(), 'yt_cookies.txt');
-      try {
-        if (!fs.existsSync(writableCookiesPath)) {
-          fs.copyFileSync(cookiesPath, writableCookiesPath);
-        }
-        dlOptions.cookies = writableCookiesPath;
-      } catch (err) {
-        console.error('Failed to copy cookies to writable path:', err);
-        dlOptions.cookies = cookiesPath;
-      }
-    }
-    */
+    // let cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+    // if (!cookiesPath && fs.existsSync('/etc/secrets/cookies.txt')) {
+    //   cookiesPath = '/etc/secrets/cookies.txt';
+    // } else if (!cookiesPath && fs.existsSync(path.join(__dirname, 'cookies.txt'))) {
+    //   cookiesPath = path.join(__dirname, 'cookies.txt');
+    // }
+
+    // if (cookiesPath && fs.existsSync(cookiesPath)) {
+    //   // yt-dlp attempts to write back to the cookies file to keep session tokens fresh.
+    //   // Since /etc/secrets/ is a read-only file system, we must provide a writable copy.
+    //   const writableCookiesPath = path.join(require('os').tmpdir(), 'yt_cookies.txt');
+    //   try {
+    //     if (!fs.existsSync(writableCookiesPath)) {
+    //       fs.copyFileSync(cookiesPath, writableCookiesPath);
+    //     }
+    //     dlOptions.cookies = writableCookiesPath;
+    //   } catch (err) {
+    //     console.error('Failed to copy cookies to writable path:', err);
+    //     dlOptions.cookies = cookiesPath;
+    //   }
+    // }
+
 
 
     // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
@@ -101,6 +119,7 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
     }, (audioRes) => {
       const status = rangeHeader && audioRes.statusCode === 206 ? 206 : 200;
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Content-Type', audioRes.headers['content-type'] || 'audio/mp4');
       res.setHeader('Accept-Ranges', 'bytes');
       if (audioRes.headers['content-length']) res.setHeader('Content-Length', audioRes.headers['content-length']);

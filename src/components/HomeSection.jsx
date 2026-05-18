@@ -12,6 +12,7 @@ export default function HomeSection({
     formatTime,
     waveformBars,
     isPlaying,
+    isMuted,
     activeRoomCode,
     onJoinRoom,
     authDisplayName,
@@ -43,6 +44,7 @@ export default function HomeSection({
                         streamUrl={streamUrl}
                         duration={currentTrack.duration}
                         isPlaying={isPlaying}
+                        isMuted={isMuted}
                         showControls={false}
                         onTimeUpdate={onTimeUpdate}
                         onRegisterSeek={onRegisterSeek}

@@ -19,7 +19,8 @@ export const getYouTubeStreamUrl = async (videoId) => {
   try {
     const response = await fetch(`${BACKEND_URL}/api/youtube/stream/${videoId}`, {
       headers: {
-        "ngrok-skip-browser-warning": "69420",
+        "ngrok-skip-browser-warning": "000",
+        "bypass-tunnel-reminder":"asddsa",
       }
     });
 
@@ -50,6 +51,7 @@ export const getYouTubeMetadata = async (videoId) => {
     const response = await fetch(`${BACKEND_URL}/api/youtube/metadata/${videoId}`, {
       headers: {
         "ngrok-skip-browser-warning": "69420",
+        "bypass-tunnel-reminder":"asddsa",
       }
     });
 
@@ -82,6 +84,7 @@ export const getYouTubeStreamInfo = async (videoId) => {
       headers: {
         'Content-Type': 'application/json',
         "ngrok-skip-browser-warning": "69420",
+        "bypass-tunnel-reminder":"asddsa",
       },
       body: JSON.stringify({
         videoId
@@ -111,6 +114,7 @@ export const checkBackendHealth = async () => {
       method: 'GET',
       headers: {
         "ngrok-skip-browser-warning": "69420",
+        "bypass-tunnel-reminder":"asddsa",
       }
     });
     return response.ok;
