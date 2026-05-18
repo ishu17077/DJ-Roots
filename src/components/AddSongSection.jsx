@@ -67,17 +67,6 @@ export default function AddSongSection({
 
           {activeAddTab !== 'url' ? (
             <>
-              <div className="relative">
-                <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-3.5" />
-                <input
-                  type="text"
-                  value={searchFilterText}
-                  onChange={(e) => setSearchFilterText(e.target.value)}
-                  placeholder="Search for a song, artist or album..."
-                  className="w-full bg-[#08080f]/90 border border-zinc-800/80 focus:border-violet-500/80 rounded-xl pl-12 pr-4 py-3.5 text-xs text-white focus:outline-none placeholder-zinc-500 tracking-wide transition-all"
-                />
-              </div>
-
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black tracking-wider text-white uppercase">
