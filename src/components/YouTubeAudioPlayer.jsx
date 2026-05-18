@@ -12,6 +12,8 @@ export default function YouTubeAudioPlayer({
   duration,
   streamUrl,
   isPlaying = false,
+  isMuted = false,
+  onMuteChange = () => { },
   onPlay = () => { },
   onPause = () => { },
   onTimeUpdate = () => { },
@@ -30,7 +32,6 @@ export default function YouTubeAudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -178,6 +179,24 @@ export default function YouTubeAudioPlayer({
     return () => onRegisterVolume(null);
   }, [onRegisterVolume, isReady, useFallback]);
 
+  // Sync mute state with prop
+  useEffect(() => {
+    if (useFallback) {
+      if (fallbackAudioRef.current) {
+        fallbackAudioRef.current.muted = isMuted;
+      }
+      return;
+    }
+    
+    if (playerRef.current && isReady) {
+      if (isMuted) {
+        if (typeof playerRef.current.mute === 'function') playerRef.current.mute();
+      } else {
+        if (typeof playerRef.current.unMute === 'function') playerRef.current.unMute();
+      }
+    }
+  }, [isMuted, isReady, useFallback]);
+
   // Interval for Time updates (IFrame)
   function startProgressInterval() {
     if (progressInterval.current) clearInterval(progressInterval.current);
@@ -199,14 +218,7 @@ export default function YouTubeAudioPlayer({
 
   // Local Controls
   const toggleMute = () => {
-    if (playerRef.current && isReady) {
-      if (isMuted) {
-        playerRef.current.unMute();
-      } else {
-        playerRef.current.mute();
-      }
-      setIsMuted(!isMuted);
-    }
+    onMuteChange(!isMuted);
   };
 
   const handleVolumeChange = (e) => {
@@ -215,8 +227,7 @@ export default function YouTubeAudioPlayer({
     if (playerRef.current && isReady) {
       playerRef.current.setVolume(newVolume * 100);
       if (newVolume > 0 && isMuted) {
-        playerRef.current.unMute();
-        setIsMuted(false);
+        onMuteChange(false);
       }
     }
   };
