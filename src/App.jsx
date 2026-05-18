@@ -324,17 +324,15 @@ const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
 
 const TRENDING_POOL = [
   { id: 't1', title: 'Bella Ciao', artist: 'Money Heist', duration: 143, bpm: 120, key: 'A Min', pitch: 220, source: 'youtube', youtubeVideoId: '0aUav1lx3rA', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg' },
-  { id: 't2', title: 'Bekhayali', artist: 'Sachet Tandon', duration: 371, bpm: 120, key: 'E Min', pitch: 240, source: 'youtube', youtubeVideoId: 'yWfkr8KlHtw', img: 'https://img.youtube.com/vi/yWfkr8KlHtw/mqdefault.jpg' },
   { id: 't3', title: 'Rasputin', artist: 'Boney M', duration: 283, bpm: 126, key: 'B Min', pitch: 250, source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg' },
-  { id: 't4', title: 'Sahiba', artist: 'Aditya Rikhari', duration: 180, bpm: 110, key: 'C Min', pitch: 230, source: 'youtube', youtubeVideoId: 'ZhhBlQC_5N8', img: 'https://img.youtube.com/vi/ZhhBlQC_5N8/mqdefault.jpg' }
+  { id: 't2', title: 'Vaari Jaavan', artist: 'Jyoti Nooran', duration: 210, bpm: 115, key: 'D Min', pitch: 240, source: 'youtube', youtubeVideoId: 'SJ73cJXbPhE', img: 'https://img.youtube.com/vi/SJ73cJXbPhE/mqdefault.jpg' }
 ];
 
 // Hardcoded fallback data for offline mode
 const FALLBACK_QUEUE = [
   { id: '1', title: 'Bella Ciao', artist: 'Money Heist', votes: 24, duration: 143, pitch: 220, bpm: 120, key: 'A Min', source: 'youtube', youtubeVideoId: '0aUav1lx3rA', addedBy: 'Kabir', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
-  { id: '2', title: 'Bekhayali', artist: 'Sachet Tandon', votes: 10, duration: 371, pitch: 240, bpm: 120, key: 'E Min', source: 'youtube', youtubeVideoId: 'yWfkr8KlHtw', addedBy: 'Meera', img: 'https://img.youtube.com/vi/yWfkr8KlHtw/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
   { id: '3', title: 'Rasputin', artist: 'Boney M', votes: 8, duration: 283, pitch: 250, bpm: 126, key: 'B Min', source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', addedBy: 'Riya', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
-  { id: '4', title: 'Sahiba', artist: 'Aditya Rikhari', votes: 4, duration: 180, pitch: 230, bpm: 110, key: 'C Min', source: 'youtube', youtubeVideoId: 'ZhhBlQC_5N8', addedBy: 'Rohan', img: 'https://img.youtube.com/vi/ZhhBlQC_5N8/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' }
+  { id: '2', title: 'Vaari Jaavan', artist: 'Jyoti Nooran', votes: 15, duration: 210, pitch: 240, bpm: 115, key: 'D Min', source: 'youtube', youtubeVideoId: 'SJ73cJXbPhE', addedBy: 'Rohan', img: 'https://img.youtube.com/vi/SJ73cJXbPhE/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' }
 ];
 
 export default function App() {
