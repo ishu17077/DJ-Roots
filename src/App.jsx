@@ -324,17 +324,17 @@ const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
 
 const TRENDING_POOL = [
   { id: 't1', title: 'Bella Ciao', artist: 'Money Heist', duration: 143, bpm: 120, key: 'A Min', pitch: 220, source: 'youtube', youtubeVideoId: '0aUav1lx3rA', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg' },
-  { id: 't2', title: 'Bekhayali', artist: 'Sachet Tandon', duration: 371, bpm: 120, key: 'E Min', pitch: 240, source: 'youtube', youtubeVideoId: 'VOLKJJvfAbg', img: 'https://img.youtube.com/vi/VOLKJJvfAbg/mqdefault.jpg' },
+  { id: 't2', title: 'Bekhayali', artist: 'Sachet Tandon', duration: 371, bpm: 120, key: 'E Min', pitch: 240, source: 'youtube', youtubeVideoId: 'yWfkr8KlHtw', img: 'https://img.youtube.com/vi/yWfkr8KlHtw/mqdefault.jpg' },
   { id: 't3', title: 'Rasputin', artist: 'Boney M', duration: 283, bpm: 126, key: 'B Min', pitch: 250, source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg' },
-  { id: 't4', title: 'Sahiba', artist: 'Aditya Rikhari', duration: 180, bpm: 110, key: 'C Min', pitch: 230, source: 'youtube', youtubeVideoId: 'n2dVFdqMYGA', img: 'https://img.youtube.com/vi/n2dVFdqMYGA/mqdefault.jpg' }
+  { id: 't4', title: 'Sahiba', artist: 'Aditya Rikhari', duration: 180, bpm: 110, key: 'C Min', pitch: 230, source: 'youtube', youtubeVideoId: 'ZhhBlQC_5N8', img: 'https://img.youtube.com/vi/ZhhBlQC_5N8/mqdefault.jpg' }
 ];
 
 // Hardcoded fallback data for offline mode
 const FALLBACK_QUEUE = [
   { id: '1', title: 'Bella Ciao', artist: 'Money Heist', votes: 24, duration: 143, pitch: 220, bpm: 120, key: 'A Min', source: 'youtube', youtubeVideoId: '0aUav1lx3rA', addedBy: 'Kabir', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&q=80' },
-  { id: '2', title: 'Bekhayali', artist: 'Sachet Tandon', votes: 10, duration: 371, pitch: 240, bpm: 120, key: 'E Min', source: 'youtube', youtubeVideoId: 'VOLKJJvfAbg', addedBy: 'Meera', img: 'https://img.youtube.com/vi/VOLKJJvfAbg/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
+  { id: '2', title: 'Bekhayali', artist: 'Sachet Tandon', votes: 10, duration: 371, pitch: 240, bpm: 120, key: 'E Min', source: 'youtube', youtubeVideoId: 'yWfkr8KlHtw', addedBy: 'Meera', img: 'https://img.youtube.com/vi/yWfkr8KlHtw/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=80' },
   { id: '3', title: 'Rasputin', artist: 'Boney M', votes: 8, duration: 283, pitch: 250, bpm: 126, key: 'B Min', source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', addedBy: 'Riya', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80' },
-  { id: '4', title: 'Sahiba', artist: 'Aditya Rikhari', votes: 4, duration: 180, pitch: 230, bpm: 110, key: 'C Min', source: 'youtube', youtubeVideoId: 'n2dVFdqMYGA', addedBy: 'Rohan', img: 'https://img.youtube.com/vi/n2dVFdqMYGA/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' }
+  { id: '4', title: 'Sahiba', artist: 'Aditya Rikhari', votes: 4, duration: 180, pitch: 230, bpm: 110, key: 'C Min', source: 'youtube', youtubeVideoId: 'ZhhBlQC_5N8', addedBy: 'Rohan', img: 'https://img.youtube.com/vi/ZhhBlQC_5N8/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' }
 ];
 
 export default function App() {
@@ -494,7 +494,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // --- STATE ---
   const [activeView, setActiveView] = useState('home');
   const [activeAddTab, setActiveAddTab] = useState('search');
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
+  const [localCurrentTrackId, setLocalCurrentTrackId] = useState(null);
   const [localIsPlaying, setLocalIsPlaying] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
@@ -540,7 +540,34 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // Is the current user the HOST of the active room?
 
 
-  const [offlineQueue, setOfflineQueue] = useState(() => FALLBACK_QUEUE);
+  const [offlineQueue, setOfflineQueue] = useState(() => {
+    try {
+      const saved = localStorage.getItem('djroots_offline_queue');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to load offline queue from localStorage', e);
+    }
+    return FALLBACK_QUEUE;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('djroots_offline_queue', JSON.stringify(offlineQueue));
+  }, [offlineQueue]);
+
+  const [recentlyPlayed, setRecentlyPlayed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('djroots_recent');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to load recent queue from localStorage', e);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('djroots_recent', JSON.stringify(recentlyPlayed));
+  }, [recentlyPlayed]);
+
 
   // --- Derived queue state (real data from Supabase, or local offline fallback) ---
   const queueList = activeRoomCode ? supabaseQueue : offlineQueue;
@@ -555,8 +582,23 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     if (activeRoomCode && supabaseRoom) {
       return queueList.find(t => t.id === supabaseRoom.current_track_id) || fallback;
     }
-    return queueList[currentTrackIndex] || fallback;
-  }, [queueList, activeRoomCode, supabaseRoom, currentTrackIndex]);
+    
+    if (localCurrentTrackId) {
+      const found = queueList.find(t => t.id === localCurrentTrackId);
+      if (found) return found;
+    }
+    
+    return queueList.length > 0 ? queueList[0] : fallback;
+  }, [queueList, activeRoomCode, supabaseRoom, localCurrentTrackId]);
+
+  useEffect(() => {
+    if (currentTrack && currentTrack.id !== 'empty') {
+      setRecentlyPlayed(prev => {
+        const filtered = prev.filter(s => s.title !== currentTrack.title); // filter by title instead of id to prevent dupes across modes
+        return [currentTrack, ...filtered].slice(0, 20);
+      });
+    }
+  }, [currentTrack]);
 
   const isPlaying = activeRoomCode && supabaseRoom ? supabaseRoom.is_playing : localIsPlaying;
 
@@ -674,8 +716,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       supabaseUpdateRoom({ is_playing: !supabaseRoom.is_playing });
       return;
     }
-    if (currentTrackIndex === -1 && queueList.length > 0) {
-      setCurrentTrackIndex(0);
+    if (!localCurrentTrackId && queueList.length > 0) {
+      setLocalCurrentTrackId(queueList[0].id);
       setLocalIsPlaying(true);
       return;
     }
@@ -727,7 +769,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
     const targetIdx = queueList.findIndex(t => t.id === id);
     if (targetIdx !== -1) {
-      setCurrentTrackIndex(targetIdx);
+      setLocalCurrentTrackId(id);
       setAudioElapsedSeconds(0);
       addToast('Track Changed', `Selected: ${queueList[targetIdx].title}`);
       setLocalIsPlaying(true);
@@ -761,24 +803,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           supabaseUpdateRoom({ is_playing: false, current_track_id: null });
         } else {
           setLocalIsPlaying(false);
-          setCurrentTrackIndex(-1);
-          setAudioElapsedSeconds(0);
-        }
-      }
-    } else {
-      selectTrack(queueList[target].id);
-    }
-    if (target >= queueList.length) {
-      if (isRepeat) {
-        target = 0;
-        selectTrack(queueList[target].id);
-      } else {
-        // Stop playback at end of queue
-        if (activeRoomCode && supabaseRoom) {
-          supabaseUpdateRoom({ is_playing: false, current_track_id: null });
-        } else {
-          setLocalIsPlaying(false);
-          setCurrentTrackIndex(-1);
+          setLocalCurrentTrackId(null);
           setAudioElapsedSeconds(0);
         }
       }
@@ -868,6 +893,51 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
   };
 
+  const playSongFromPool = (song) => {
+    if (activeRoomCode && !isHost) {
+      addToast('Permission Denied', 'Only the DJ can change tracks.', false);
+      return;
+    }
+    
+    // Check if it's already in the queue
+    const existing = queueList.find(q => q.title.toLowerCase() === song.title.toLowerCase());
+    
+    if (existing) {
+      selectTrack(existing.id);
+    } else {
+      // Create new song object for queue
+      const newSong = {
+        id: Date.now().toString(),
+        title: song.title,
+        artist: song.artist,
+        votes: 1,
+        duration: song.duration,
+        pitch: song.pitch || 260,
+        bpm: song.bpm,
+        key: song.key,
+        addedBy: userProfile?.name || 'Guest',
+        img: song.img,
+        userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80',
+        youtubeVideoId: song.youtubeVideoId,
+        source: song.source
+      };
+      
+      setQueueList(prev => [...prev, newSong]);
+      
+      if (activeRoomCode && supabaseConnected) {
+        supabaseAddSong(newSong);
+        supabaseUpdateRoom({ current_track_id: newSong.id, is_playing: true });
+        setAudioElapsedSeconds(0);
+        addToast('Track Changed', `Selected: ${newSong.title}`);
+      } else {
+        setLocalCurrentTrackId(newSong.id);
+        setAudioElapsedSeconds(0);
+        addToast('Track Changed', `Selected: ${newSong.title}`);
+        setLocalIsPlaying(true);
+      }
+    }
+  };
+
   const handleAddTrackByUrl = async (e) => {
     e.preventDefault();
     if (!songLinkInput.trim()) return;
@@ -912,6 +982,20 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       console.error('Error adding YouTube video:', error);
       addToast('Error', 'Failed to add video. Please check the URL and try again.');
     }
+  };
+
+  const deleteTrack = (id) => {
+    // If deleting the currently playing track, skip to next first
+    if (currentTrack?.id === id) {
+      nextTrack();
+    }
+    
+    if (activeRoomCode && supabaseConnected) {
+      supabaseRemoveSong(id);
+    } else {
+      setQueueList(prev => prev.filter(song => song.id !== id));
+    }
+    addToast('Track Deleted', 'The song was removed from the queue.');
   };
 
   const toggleShuffle = () => {
@@ -1222,7 +1306,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         clearInterval(sequencerIntervalRef.current);
       }
     };
-  }, [isPlaying, currentTrackIndex]);
+  }, [isPlaying, currentTrack?.id]);
 
   // Handle Spectrum dynamic bounce loop
   useEffect(() => {
@@ -1278,26 +1362,37 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       {/* ENTER WORLD OVERLAY */}
       {!hasEntered && (
         <div 
-          className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl cursor-pointer group"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#030307] cursor-pointer group transition-opacity duration-1000"
           onClick={() => {
             setHasEntered(true);
             setIsMuted(false);
-            if (activeRoomCode && !localIsPlaying) {
-               // Optional: ensure autoplay is triggered if they are in a room
-            }
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-tr from-violet-900/20 to-fuchsia-900/20 pointer-events-none" />
+          {/* Subtle Ambient Glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.15),transparent_50%)] pointer-events-none" />
+
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-24 h-24 rounded-full bg-violet-600/20 border-2 border-violet-500/50 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-violet-600/40 group-hover:border-violet-400 transition-all duration-500 shadow-[0_0_50px_rgba(139,92,246,0.3)] group-hover:shadow-[0_0_80px_rgba(139,92,246,0.6)]">
-              <Play className="w-10 h-10 text-white ml-2 drop-shadow-lg" />
+            {/* Interactive Play Button */}
+            <div className="relative w-32 h-32 mb-12 flex items-center justify-center">
+              {/* Ripple Rings */}
+              <div className="absolute inset-0 rounded-full border border-violet-500/30 scale-100 group-hover:scale-[1.5] group-hover:opacity-0 transition-all duration-1000 ease-out" />
+              <div className="absolute inset-4 rounded-full border border-fuchsia-500/30 scale-100 group-hover:scale-[1.3] group-hover:opacity-0 transition-all duration-700 ease-out delay-75" />
+              
+              {/* Solid Button */}
+              <div className="absolute inset-8 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-[0_0_60px_rgba(139,92,246,0.4)] group-hover:shadow-[0_0_100px_rgba(217,70,239,0.8)] group-hover:scale-110 transition-all duration-500 flex items-center justify-center">
+                <Play className="w-10 h-10 text-white ml-2 drop-shadow-lg" />
+              </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 tracking-tighter mb-4 drop-shadow-xl transform group-hover:scale-105 transition-transform duration-500">
-              ENTER DJ ROOTS
+
+            {/* Typography */}
+            <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl transition-all duration-700 group-hover:scale-105">
+              DJ ROOTS
             </h1>
-            <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm md:text-base animate-pulse">
-              Click anywhere to start the vibe
-            </p>
+            <div className="flex items-center gap-4 text-zinc-500 font-bold text-xs tracking-[0.3em] uppercase">
+              <div className="w-12 h-[1px] bg-gradient-to-r from-transparent to-zinc-600" />
+              <span className="group-hover:text-violet-400 transition-colors duration-500">Tap to start</span>
+              <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-zinc-600" />
+            </div>
           </div>
         </div>
       )}
@@ -1579,6 +1674,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               setSearchFilterText={setSearchFilterText}
               filteredTrending={filteredTrending}
               addSongFromPool={addSongFromPool}
+              playSongFromPool={playSongFromPool}
               songLinkInput={songLinkInput}
               setSongLinkInput={setSongLinkInput}
               handleAddTrackByUrl={handleAddTrackByUrl}
@@ -1595,6 +1691,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               skipDownvotes={skipDownvotes}
               setSkipDownvotes={setSkipDownvotes}
               skipThreshold={skipThreshold}
+              recentlyPlayed={recentlyPlayed}
             />
           ) : null
         }
@@ -1649,7 +1746,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               activeRoomCode={activeRoomCode}
               isHost={isHost}
               selectTrack={selectTrack}
-              
+              deleteTrack={deleteTrack}
             />
           ) : null
         }
