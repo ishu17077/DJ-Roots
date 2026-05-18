@@ -50,7 +50,7 @@ export default function AddSongSection({
 
           <div className="flex gap-4 border-b border-zinc-900 pb-1">
             {[
-              ['search', 'Search'],
+              ['search', 'Trending'],
               ['url', 'URL'],
               ['library', 'Recently Played'],
             ].map(([tab, label]) => (
@@ -67,6 +67,17 @@ export default function AddSongSection({
 
           {activeAddTab !== 'url' ? (
             <>
+              <div className="relative mb-5">
+                <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-3.5" />
+                <input
+                  type="text"
+                  value={searchFilterText}
+                  onChange={(e) => setSearchFilterText(e.target.value)}
+                  placeholder="Search for a song, artist or album..."
+                  className="w-full bg-[#08080f]/90 border border-zinc-800/80 focus:border-violet-500/80 rounded-xl pl-12 pr-4 py-3.5 text-xs text-white focus:outline-none placeholder-zinc-500 tracking-wide transition-all"
+                />
+              </div>
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black tracking-wider text-white uppercase">
@@ -130,11 +141,15 @@ export default function AddSongSection({
             </>
           ) : null}
 
-          <div className="flex items-center gap-4 text-[10px] text-zinc-600 font-extrabold uppercase tracking-widest my-1">
-            <div className="flex-1 h-[1px] bg-zinc-900" />
-            <span>or</span>
-            <div className="flex-1 h-[1px] bg-zinc-900" />
-          </div>
+          {activeAddTab === 'url' || activeAddTab === 'search' ? (
+            <>
+              {activeAddTab === 'search' ? (
+                <div className="flex items-center gap-4 text-[10px] text-zinc-600 font-extrabold uppercase tracking-widest my-1">
+                  <div className="flex-1 h-[1px] bg-zinc-900" />
+                  <span>or</span>
+                  <div className="flex-1 h-[1px] bg-zinc-900" />
+                </div>
+              ) : null}
 
           <form onSubmit={handleAddTrackByUrl} className="border border-dashed border-violet-500/10 hover:border-violet-500/20 bg-violet-950/2 p-5 rounded-2xl flex flex-col sm:flex-row items-center gap-5 justify-between transition-all">
             <div className="flex items-center gap-4.5">
@@ -179,6 +194,8 @@ export default function AddSongSection({
             <Info className="w-4 h-4 text-violet-400" />
             <span className="text-[11px] text-zinc-400 font-medium">YouTube videos play without ads. Share any valid YouTube link and it will be instantly processed with full metadata.</span>
           </div>
+            </>
+          ) : null}
         </section>
       </main>
 
