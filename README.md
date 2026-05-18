@@ -101,6 +101,21 @@ npm run dev
 
 ---
 
+## 🚀 Future Scope: Hype Mode
+
+Hype Mode introduces a futuristic, immersive DJ environment where the interface transforms into an AR-powered virtual console. When enabled, users will experience a next-level interactive music system, blending visuals, motion, and real-time feedback to elevate the overall vibe of the session.
+
+**✨ What it Brings**
+- A fully immersive DJ experience
+- A virtual, touchless control environment
+- Enhanced visual effects and dynamic UI
+- A more engaging and energetic party atmosphere
+
+> **⚠️ Status**
+> 🚧 *This feature is planned for future implementation.*
+
+---
+
 ## 📦 Tech Stack
 
 - **Frontend**: React 19, Vite, Tailwind CSS v4, Framer Motion, GSAP, Three.js
