@@ -10,6 +10,7 @@ export default function YouTubeAudioPlayer({
   videoId,
   title,
   duration,
+  streamUrl,
   isPlaying = false,
   onPlay = () => { },
   onPause = () => { },
@@ -22,6 +23,7 @@ export default function YouTubeAudioPlayer({
 }) {
   const playerRef = useRef(null);
   const containerRef = useRef(null);
+  const fallbackAudioRef = useRef(null);
   const progressInterval = useRef(null);
   
   const [isReady, setIsReady] = useState(false);
@@ -30,6 +32,13 @@ export default function YouTubeAudioPlayer({
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [useFallback, setUseFallback] = useState(false);
+
+  // Use refs for callbacks to avoid stale closures in YT player events
+  const callbacksRef = useRef({ onPlay, onPause, onEnded, onError, onTimeUpdate });
+  useEffect(() => {
+    callbacksRef.current = { onPlay, onPause, onEnded, onError, onTimeUpdate };
+  }, [onPlay, onPause, onEnded, onError, onTimeUpdate]);
 
   // Initialize YouTube IFrame API
   useEffect(() => {
@@ -61,13 +70,13 @@ export default function YouTubeAudioPlayer({
             const YT = window.YT;
             if (event.data === YT.PlayerState.PLAYING) {
               setIsLoading(false);
-              onPlay();
+              callbacksRef.current.onPlay();
               startProgressInterval();
             } else if (event.data === YT.PlayerState.PAUSED) {
-              onPause();
+              callbacksRef.current.onPause();
               stopProgressInterval();
             } else if (event.data === YT.PlayerState.ENDED) {
-              onEnded();
+              callbacksRef.current.onEnded();
               stopProgressInterval();
             } else if (event.data === YT.PlayerState.BUFFERING) {
               setIsLoading(true);
@@ -75,8 +84,13 @@ export default function YouTubeAudioPlayer({
           },
           onError: (event) => {
             console.error('YouTube Player Error:', event.data);
-            setError('Failed to load track from YouTube.');
-            onError(event.data);
+            // If error is 101 or 150 (embed restricted), fallback to proxy
+            if (event.data === 101 || event.data === 150 || event.data === 2) {
+              setUseFallback(true);
+            } else {
+              setError('Failed to load track from YouTube.');
+              callbacksRef.current.onError(event.data);
+            }
           }
         }
       });
@@ -104,18 +118,30 @@ export default function YouTubeAudioPlayer({
 
   // Sync videoId
   useEffect(() => {
+    setUseFallback(false);
+    setError(null);
     if (playerRef.current && isReady && playerRef.current.loadVideoById) {
       setIsLoading(true);
-      setError(null);
       playerRef.current.loadVideoById(videoId);
       if (!isPlaying) {
         playerRef.current.pauseVideo();
       }
     }
-  }, [videoId, isReady]); // isPlaying is handled below
+  }, [videoId, isReady]);
 
   // Sync play/pause state
   useEffect(() => {
+    if (useFallback) {
+      if (fallbackAudioRef.current) {
+        if (isPlaying) {
+          fallbackAudioRef.current.play().catch(e => console.error('Fallback play error:', e));
+        } else {
+          fallbackAudioRef.current.pause();
+        }
+      }
+      return;
+    }
+    
     if (playerRef.current && isReady) {
       if (isPlaying) {
         playerRef.current.playVideo();
@@ -123,38 +149,43 @@ export default function YouTubeAudioPlayer({
         playerRef.current.pauseVideo();
       }
     }
-  }, [isPlaying, isReady]);
+  }, [isPlaying, isReady, useFallback]);
 
   // Expose Seek Function
   useEffect(() => {
     onRegisterSeek((seconds) => {
-      if (playerRef.current && isReady && typeof playerRef.current.seekTo === 'function') {
+      if (useFallback && fallbackAudioRef.current) {
+        fallbackAudioRef.current.currentTime = seconds;
+        setCurrentTime(seconds);
+      } else if (playerRef.current && isReady && typeof playerRef.current.seekTo === 'function') {
         playerRef.current.seekTo(seconds, true);
         setCurrentTime(seconds);
       }
     });
     return () => onRegisterSeek(null);
-  }, [onRegisterSeek, isReady]);
+  }, [onRegisterSeek, isReady, useFallback]);
 
   // Expose Volume Function
   useEffect(() => {
     onRegisterVolume((vol) => {
       const newVol = Math.max(0, Math.min(100, vol * 100));
-      if (playerRef.current && isReady && typeof playerRef.current.setVolume === 'function') {
+      if (useFallback && fallbackAudioRef.current) {
+        fallbackAudioRef.current.volume = Math.max(0, Math.min(1, vol));
+      } else if (playerRef.current && isReady && typeof playerRef.current.setVolume === 'function') {
         playerRef.current.setVolume(newVol);
       }
     });
     return () => onRegisterVolume(null);
-  }, [onRegisterVolume, isReady]);
+  }, [onRegisterVolume, isReady, useFallback]);
 
-  // Interval for Time updates
+  // Interval for Time updates (IFrame)
   function startProgressInterval() {
     if (progressInterval.current) clearInterval(progressInterval.current);
     progressInterval.current = setInterval(() => {
       if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
         const time = playerRef.current.getCurrentTime();
         setCurrentTime(time);
-        onTimeUpdate(time);
+        callbacksRef.current.onTimeUpdate(time);
       }
     }, 250);
   }
@@ -206,11 +237,44 @@ export default function YouTubeAudioPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  if (!showControls) {
+    return (
+      <div className="fixed -top-[2000px] -left-[2000px] w-[200px] h-[200px] opacity-1 pointer-events-none z-0">
+        <div ref={containerRef} />
+        {useFallback && streamUrl && (
+          <audio
+            ref={fallbackAudioRef}
+            src={streamUrl}
+            onPlay={callbacksRef.current.onPlay}
+            onPause={callbacksRef.current.onPause}
+            onEnded={callbacksRef.current.onEnded}
+            onTimeUpdate={(e) => callbacksRef.current.onTimeUpdate(e.target.currentTime)}
+            onError={(e) => {
+              console.error("Fallback audio error:", e);
+              callbacksRef.current.onError(e);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-3 relative">
       {/* Invisible YouTube Player */}
-      <div className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+      <div className="fixed -top-[2000px] -left-[2000px] w-[200px] h-[200px] opacity-1 pointer-events-none z-0">
         <div ref={containerRef} />
+        {useFallback && streamUrl && (
+          <audio
+            ref={fallbackAudioRef}
+            src={streamUrl}
+            onPlay={callbacksRef.current.onPlay}
+            onPause={callbacksRef.current.onPause}
+            onEnded={callbacksRef.current.onEnded}
+            onTimeUpdate={(e) => callbacksRef.current.onTimeUpdate(e.target.currentTime)}
+            onError={(e) => callbacksRef.current.onError(e)}
+          />
+        )}
       </div>
 
       {error ? (

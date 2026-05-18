@@ -328,6 +328,44 @@ const FALLBACK_QUEUE = [
   { id: '4', title: 'Sahiba', artist: 'Aditya Rikhari', votes: 4, duration: 180, pitch: 230, bpm: 110, key: 'C Min', source: 'youtube', youtubeVideoId: 'n2dVFdqMYGA', addedBy: 'Rohan', img: 'https://img.youtube.com/vi/n2dVFdqMYGA/mqdefault.jpg', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80' }
 ];
 
+import { Component } from 'react';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    this.setState({ info });
+    console.error('DJ Roots crash:', error, info?.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ background: '#030307', color: '#e4e4e7', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: 'monospace' }}>
+          <div style={{ background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: '12px', padding: '2rem', maxWidth: '700px', width: '100%' }}>
+            <h2 style={{ color: '#f87171', marginBottom: '1rem', fontSize: '1.1rem' }}>💥 DJ Roots crashed</h2>
+            <p style={{ color: '#a1a1aa', marginBottom: '1rem', fontSize: '0.8rem' }}>Error: <span style={{ color: '#fca5a5' }}>{this.state.error?.message}</span></p>
+            <pre style={{ color: '#71717a', fontSize: '0.65rem', overflow: 'auto', background: '#09090b', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+              {this.state.info?.componentStack}
+            </pre>
+            <button
+              onClick={() => { this.setState({ hasError: false, error: null, info: null }); window.location.reload(); }}
+              style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.5rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+            >
+              Reload App
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
 
@@ -401,7 +439,11 @@ export default function App() {
 
   // Go straight to the dashboard — room join/create is handled inside
   const authDisplayName = authUser.user_metadata?.display_name || authUser.email?.split('@')[0] || 'Guest';
-  return <DJRootsApp authUser={authUser} authDisplayName={authDisplayName} onLogout={handleLogout} />;
+  return (
+    <ErrorBoundary>
+      <DJRootsApp authUser={authUser} authDisplayName={authDisplayName} onLogout={handleLogout} />
+    </ErrorBoundary>
+  );
 }
 
 function DJRootsApp({ authUser, authDisplayName, onLogout }) {
@@ -528,6 +570,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
 
   const [offlineQueue, setOfflineQueue] = useState(() => FALLBACK_QUEUE);
+  const [recentlyPlayed, setRecentlyPlayed] = useState([]);
 
   // --- Derived queue state (real data from Supabase, or local offline fallback) ---
   const queueList = activeRoomCode ? supabaseQueue : offlineQueue;
@@ -543,6 +586,15 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     }
     return queueList[currentTrackIndex] || fallback;
   }, [queueList, activeRoomCode, supabaseRoom, currentTrackIndex]);
+
+  useEffect(() => {
+    if (currentTrack && currentTrack.id !== 'empty') {
+      setRecentlyPlayed(prev => {
+        const filtered = prev.filter(t => t.id !== currentTrack.id);
+        return [currentTrack, ...filtered].slice(0, 50); // Keep max 50
+      });
+    }
+  }, [currentTrack]);
 
   const isPlaying = activeRoomCode && supabaseRoom ? supabaseRoom.is_playing : localIsPlaying;
 
@@ -750,6 +802,22 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     } else {
       selectTrack(queueList[target].id);
     }
+  };
+
+  const deleteTrack = (id) => {
+    // If deleting the currently playing track, skip to next first
+    if (currentTrack?.id === id) {
+      nextTrack();
+    }
+    
+    // If in a room, use the Supabase handler (removes from queue_items table)
+    if (supabaseConnected && activeRoomCode) {
+      supabaseRemoveSong(id);
+    }
+
+    // Always update local state immediately for responsive UI
+    setQueueList(prev => prev.filter(song => song.id !== id));
+    addToast('Track Deleted', 'The song was removed from the queue.');
   };
 
   const voteSong = (id, value) => {
@@ -1172,7 +1240,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     // Sync is_playing
     if (supabaseRoom.is_playing !== lastSyncedRoomRef.current.is_playing) {
       lastSyncedRoomRef.current.is_playing = supabaseRoom.is_playing;
-      setIsPlaying(supabaseRoom.is_playing);
+      setLocalIsPlaying(supabaseRoom.is_playing);
     }
 
     // Sync current_track_id → find the matching index in the local queue
@@ -1556,6 +1624,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               skipDownvotes={skipDownvotes}
               setSkipDownvotes={setSkipDownvotes}
               skipThreshold={skipThreshold}
+              recentlyPlayed={recentlyPlayed}
             />
           ) : null
         }
@@ -1609,6 +1678,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               activeRoomCode={activeRoomCode}
               isHost={isHost}
               selectTrack={selectTrack}
+              deleteTrack={deleteTrack}
             />
           ) : null
         }

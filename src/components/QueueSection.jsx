@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Music,
   Play,
@@ -20,7 +21,9 @@ export default function QueueSection({
   activeRoomCode,
   isHost,
   selectTrack,
+  deleteTrack,
 }) {
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   // ─── ROOM MODE: Voting Interface ───────────────────────────────────────────
   if (activeRoomCode) {
     return (
@@ -119,7 +122,7 @@ export default function QueueSection({
                   </div>
 
                   {/* Vote Buttons & Host Controls */}
-                  <div className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 flex-shrink-0 relative">
                     {isHost && !isNowPlaying && (
                       <button
                         onClick={() => selectTrack(track.id)}
@@ -128,7 +131,7 @@ export default function QueueSection({
                         <Play className="w-4 h-4 fill-violet-400" />
                       </button>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       <button
                         onClick={() => voteSong(track.id, 1)}
                         className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition-all active:scale-90"
@@ -141,6 +144,28 @@ export default function QueueSection({
                       >
                         <ThumbsDown className="w-4 h-4" />
                       </button>
+                      
+                      <div className="relative">
+                        <button 
+                          onClick={() => setOpenDropdownId(openDropdownId === track.id ? null : track.id)}
+                          className="p-2 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {openDropdownId === track.id && (
+                          <div className="absolute right-0 top-full mt-1 w-28 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden z-50">
+                            <button 
+                              onClick={() => {
+                                deleteTrack(track.id);
+                                setOpenDropdownId(null);
+                              }}
+                              className="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 text-left transition-colors flex items-center gap-2 font-medium"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -185,8 +210,10 @@ export default function QueueSection({
               <tr className="border-b border-zinc-800/60 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                 <th className="pb-3 pl-2 w-12 text-center">#</th>
                 <th className="pb-3">Song</th>
+                <th className="pb-3 hidden sm:table-cell">Artist</th>
                 <th className="pb-3 hidden sm:table-cell">Duration</th>
                 <th className="pb-3 text-right pr-4">Play</th>
+                <th className="pb-3 w-8"></th>
               </tr>
             </thead>
             <tbody>
@@ -217,9 +244,11 @@ export default function QueueSection({
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-zinc-500 mt-0.5">{track.artist}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="py-4 hidden sm:table-cell align-middle">
+                      <span className="text-xs text-zinc-400 font-medium truncate max-w-[150px] inline-block">{track.artist}</span>
                     </td>
                     <td className="py-4 hidden sm:table-cell align-middle">
                       <span className="text-xs font-bold text-zinc-300">{formatTime(track.duration)}</span>
@@ -231,6 +260,27 @@ export default function QueueSection({
                       >
                         <Play className="w-4 h-4 fill-violet-500" />
                       </button>
+                    </td>
+                    <td className="py-4 align-middle relative">
+                      <button 
+                        onClick={() => setOpenDropdownId(openDropdownId === track.id ? null : track.id)}
+                        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      {openDropdownId === track.id && (
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 w-28 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden z-50">
+                          <button 
+                            onClick={() => {
+                              deleteTrack(track.id);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 text-left transition-colors font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

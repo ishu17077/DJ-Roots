@@ -18,6 +18,7 @@ export default function HomeSection({
     onTimeUpdate = () => {},
     onRegisterSeek = () => {},
     onRegisterVolume = () => {},
+    nextTrack = () => {},
 }) {
     // Point directly at the backend proxy — it streams audio through itself to avoid CORS
     const BACKEND = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -35,20 +36,23 @@ export default function HomeSection({
             />
 
             {/* Hidden audio engine — keeps playing across navigation */}
-            {streamUrl && (
-                <div style={{ position: 'absolute', visibility: 'hidden', height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-                    <YouTubeAudioPlayer
-                        videoId={currentTrack.youtubeVideoId}
-                        title={currentTrack.title}
-                        streamUrl={streamUrl}
-                        duration={currentTrack.duration}
-                        isPlaying={isPlaying}
-                        showControls={false}
-                        onTimeUpdate={onTimeUpdate}
-                        onRegisterSeek={onRegisterSeek}
-                        onRegisterVolume={onRegisterVolume}
-                    />
-                </div>
+            {currentTrack?.source === 'youtube' && currentTrack?.youtubeVideoId && (
+                <YouTubeAudioPlayer
+                    videoId={currentTrack.youtubeVideoId}
+                    title={currentTrack.title}
+                    duration={currentTrack.duration}
+                    streamUrl={streamUrl}
+                    isPlaying={isPlaying}
+                    showControls={false}
+                    onTimeUpdate={onTimeUpdate}
+                    onRegisterSeek={onRegisterSeek}
+                    onRegisterVolume={onRegisterVolume}
+                    onEnded={nextTrack}
+                    onError={() => {
+                        console.warn("Skipping due to YouTube error for videoId:", currentTrack.youtubeVideoId);
+                        setTimeout(nextTrack, 2000);
+                    }}
+                />
             )}
 
             {/* Content split */}

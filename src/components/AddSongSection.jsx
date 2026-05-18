@@ -27,7 +27,12 @@ export default function AddSongSection({
   audioElapsedSeconds,
   formatTime,
   upNextList,
+  recentlyPlayed = [],
 }) {
+  const filteredRecent = recentlyPlayed.filter(song =>
+    song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
+    song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
+  );
   return (
     <>
       <main className="flex-1 flex flex-col gap-4 min-h-0">
@@ -46,7 +51,7 @@ export default function AddSongSection({
             {[
               ['search', 'Search'],
               ['url', 'URL'],
-              ['library', 'Your Library'],
+              ['library', 'Recently Played'],
             ].map(([tab, label]) => (
               <button
                 key={tab}
@@ -75,7 +80,7 @@ export default function AddSongSection({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black tracking-wider text-white uppercase">
-                    {activeAddTab === 'library' ? 'Your Library Picks' : 'Trending Right Now'}
+                    {activeAddTab === 'library' ? 'Recently Played' : 'Trending Right Now'}
                   </h3>
                   <div className="flex gap-1.5">
                     <button onClick={() => addToast('Carousel Scroll', 'Displaying previous page.')} className="p-1 rounded bg-zinc-900/60 border border-zinc-800/80 text-zinc-400 hover:text-white transition-all">
@@ -88,8 +93,8 @@ export default function AddSongSection({
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-                  {filteredTrending.length > 0 ? (
-                    filteredTrending.map((song) => (
+                  {(activeAddTab === 'library' ? filteredRecent : filteredTrending).length > 0 ? (
+                    (activeAddTab === 'library' ? filteredRecent : filteredTrending).map((song) => (
                       <div key={song.id} className="bg-zinc-900/10 border border-zinc-900 p-2 rounded-xl flex flex-col justify-between gap-3 group hover:border-zinc-800 transition-all">
                         <div className="space-y-2">
                           <div className="aspect-square w-full rounded-lg overflow-hidden relative">
@@ -110,7 +115,7 @@ export default function AddSongSection({
                     ))
                   ) : (
                     <div className="col-span-5 text-center py-6 text-zinc-500 text-xs">
-                      No matching tracks found.
+                      {activeAddTab === 'library' ? 'No recently played tracks yet.' : 'No matching tracks found.'}
                     </div>
                   )}
                 </div>
