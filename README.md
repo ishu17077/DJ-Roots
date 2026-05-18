@@ -1,5 +1,13 @@
 # 🎧 DJ Roots - Interactive Crowd DJ System
 
+<div align="center">
+  <a href="https://dj-roots.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/🚀%20Access%20DJ%20Roots-Live%20Demo-9333ea?style=for-the-badge&logo=vercel&logoColor=white" alt="Open DJ Roots" width="250" />
+  </a>
+  <br />
+  <i>Experience the live platform now</i>
+</div>
+<br />
 **Crowd Vibes. You Control.** 
 
 DJ Roots is a highly interactive, real-time audio streaming platform that allows a crowd to democratically control the vibe. Users can join a room, queue YouTube tracks, upvote/downvote songs, and experience a synchronized audio stream across all connected devices—all in a visually stunning 3D interface.
