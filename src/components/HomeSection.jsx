@@ -60,7 +60,7 @@ export default function HomeSection({
             )}
 
             {/* Content split */}
-            <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10">
+            <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10 px-6 lg:px-16">
 
                 {/* Left Side: Vinyl CD — always visible */}
                 <div className="w-full lg:w-1/2 flex items-center justify-center relative h-full min-h-0 shrink-1">
@@ -157,9 +157,9 @@ export default function HomeSection({
                     </div>
 
                     {/* Waveform progress */}
-                    <div className="w-full h-10 lg:h-16 flex items-center justify-between gap-1 mb-2 lg:mb-5 mt-2 opacity-90 overflow-hidden shrink-0">
-                        {Array.from({ length: 80 }).map((_, i) => {
-                            const percent = i / 80;
+                    <div className="w-full h-10 lg:h-16 flex items-center justify-between gap-[1px] md:gap-1 mb-2 lg:mb-5 mt-2 opacity-90 overflow-hidden shrink-0">
+                        {Array.from({ length: 64 }).map((_, i) => {
+                            const percent = i / 60;
                             const isPassed = percent <= ((audioElapsedSeconds || 0) / currentTrack.duration);
                             const seed = (currentTrack.title.length * i) + i;
                             const staticH = 12 + Math.abs(Math.sin(seed * 0.4) * 16) + Math.cos(seed * 0.1) * 8;

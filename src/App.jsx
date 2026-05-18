@@ -1622,6 +1622,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               setActiveView={setActiveView}
               queueList={queueList}
               toggleShuffle={toggleShuffle}
+              activeRoomCode={activeRoomCode}
             />
           ) : null
         }
