@@ -861,17 +861,32 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   const nextTrack = () => {
     if (activeRoomCode && supabaseRoom && !canControlPlayback) return;
-    const currentIdx = queueList.findIndex(t => t.id === currentTrack.id);
-    if (isShuffle) {
+    
+    if (isShuffle && queueList.length > 0) {
       const target = Math.floor(Math.random() * queueList.length);
       selectTrack(queueList[target].id);
       return;
     }
-    let target = currentIdx + 1;
-    if (target >= queueList.length) {
-      if (isRepeat) {
-        target = 0;
-        selectTrack(queueList[target].id);
+
+    if (upNextList && upNextList.length > 0) {
+      const targetSong = upNextList[0];
+      
+      // Pop the currently playing track from the queue so it doesn't replay or clutter
+      if (currentTrack && currentTrack.id !== 'empty') {
+        if (activeRoomCode && supabaseConnected) {
+          supabaseRemoveSong(currentTrack.id);
+        } else {
+          setQueueList(prev => prev.filter(song => song.id !== currentTrack.id));
+        }
+      }
+      
+      selectTrack(targetSong.id);
+    } else {
+      if (isRepeat && queueList.length > 0) {
+        const targetSong = activeRoomCode 
+          ? [...queueList].sort((a,b) => b.votes - a.votes)[0] 
+          : queueList[0];
+        selectTrack(targetSong.id);
       } else {
         // Stop playback at end of queue
         if (activeRoomCode && supabaseRoom) {
@@ -882,8 +897,6 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           setAudioElapsedSeconds(0);
         }
       }
-    } else {
-      selectTrack(queueList[target].id);
     }
   };
 
