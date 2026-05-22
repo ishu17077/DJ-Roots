@@ -315,6 +315,16 @@ export async function updateMemberActivity(roomId, profileId, activity, activity
   if (error) console.error('updateMemberActivity error:', error);
 }
 
+/** Update a member's role */
+export async function updateMemberRole(roomId, profileId, role) {
+  const { error } = await supabase
+    .from('room_members')
+    .update({ role })
+    .eq('room_id', roomId)
+    .eq('profile_id', profileId);
+  if (error) console.error('updateMemberRole error:', error);
+}
+
 // ======================== PROFILES ========================
 
 /** Fetch all profiles (for trending / search) */

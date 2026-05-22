@@ -17,6 +17,8 @@ export default function PeopleSection({
   isPlaying = false,
   roomCode = '',
   members = [],
+  isHost = false,
+  onUpdateRole = () => {},
 }) {
   // Local state for PeopleSection
   const [activePeopleTab, setActivePeopleTab] = useState('all'); 
@@ -27,7 +29,7 @@ export default function PeopleSection({
 
   const filteredPeople = useMemo(() => {
     return peopleList.filter(person => {
-      if (activePeopleTab === 'dj-queue' && person.role !== 'Host' && person.role !== 'DJ Next') return false;
+      if (activePeopleTab === 'dj-queue' && person.role !== 'Host' && person.role !== 'CO Host') return false;
       if (activePeopleTab === 'requests' && person.role !== 'Member') return false; 
       const matchesSearch = person.name.toLowerCase().includes(peopleSearchText.toLowerCase()) || 
                             (person.username || '').toLowerCase().includes(peopleSearchText.toLowerCase()) ||
@@ -65,41 +67,7 @@ export default function PeopleSection({
             </div>
           </div>
 
-          <div className="flex gap-6 border-b border-zinc-900 pb-1 mt-1">
-            <button 
-              onClick={() => setActivePeopleTab('all')} 
-              className={`text-xs font-extrabold pb-2 transition-all relative ${
-                activePeopleTab === 'all' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              All People ({peopleList.length})
-              {activePeopleTab === 'all' && (
-                <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-violet-500 rounded-full" />
-              )}
-            </button>
-            <button 
-              onClick={() => setActivePeopleTab('dj-queue')} 
-              className={`text-xs font-extrabold pb-2 transition-all relative ${
-                activePeopleTab === 'dj-queue' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              DJ Queue ({peopleList.filter(p => p.role === 'Host' || p.role === 'DJ Next').length})
-              {activePeopleTab === 'dj-queue' && (
-                <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-violet-500 rounded-full" />
-              )}
-            </button>
-            <button 
-              onClick={() => setActivePeopleTab('requests')} 
-              className={`text-xs font-extrabold pb-2 transition-all relative ${
-                activePeopleTab === 'requests' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              Requests ({peopleList.filter(p => p.role === 'Member').length})
-              {activePeopleTab === 'requests' && (
-                <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-violet-500 rounded-full" />
-              )}
-            </button>
-          </div>
+
 
           <div className="flex-1 overflow-y-auto no-scrollbar min-h-0 space-y-1 pr-1">
             <div className="grid grid-cols-12 text-[10px] font-extrabold text-zinc-500 px-4 py-2.5 uppercase tracking-wider border-b border-zinc-900/60 bg-zinc-900/5 rounded-lg mb-1.5">
@@ -134,9 +102,9 @@ export default function PeopleSection({
                       <span className="bg-violet-500/20 text-violet-400 border border-violet-500/10 text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider">
                         Host
                       </span>
-                    ) : person.role === 'DJ Next' ? (
+                    ) : person.role === 'CO Host' ? (
                       <span className="bg-amber-500/10 text-amber-400 border border-amber-500/10 text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                        DJ Next
+                        CO Host
                       </span>
                     ) : (
                       <span className="bg-zinc-900/60 text-zinc-400 border border-zinc-800/80 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
@@ -191,25 +159,31 @@ export default function PeopleSection({
                     <span className="text-xs text-zinc-500 font-semibold">{person.joined}</span>
                   </div>
 
-                  <div className="col-span-1 text-right pr-2">
-                    <button 
-                      onClick={() => addToast('User Options', `Opening profile settings for ${person.name}`)}
-                      className="text-zinc-600 hover:text-white p-1 transition-colors"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                  <div className="col-span-1 text-right pr-2 flex justify-end relative">
+                    {isHost && person.role !== 'Host' ? (
+                      <select
+                        value={person.role === 'CO Host' ? 'co_host' : 'member'}
+                        onChange={(e) => {
+                          onUpdateRole(person.profileId, e.target.value);
+                          addToast('Role Updated', `${person.name} role updated.`);
+                        }}
+                        className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-[9px] font-bold py-1 px-1.5 rounded focus:outline-none focus:border-violet-500 cursor-pointer"
+                      >
+                        <option value="member">Member</option>
+                        <option value="co_host">CO Host</option>
+                      </select>
+                    ) : (
+                      <button 
+                        onClick={() => addToast('User Options', `Opening profile settings for ${person.name}`)}
+                        className="text-zinc-600 hover:text-white p-1 transition-colors"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })}
-          </div>
-
-          <div 
-            onClick={() => addToast('Loading Members', 'Displaying all offline room attendees')}
-            className="py-2.5 border-t border-zinc-900/60 hover:bg-zinc-900/10 text-center cursor-pointer transition-all text-[11px] font-bold text-zinc-400 flex items-center justify-center gap-1"
-          >
-            <span>Show More</span>
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
           </div>
         </section>
       </main>
