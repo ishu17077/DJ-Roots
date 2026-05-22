@@ -613,8 +613,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           const compensatedTime = payload.time + 0.35;
           const diff = Math.abs(audioElapsedRef.current - compensatedTime);
           
-          // Tighten the drift threshold to 0.4s for near-perfect alignment
-          if (diff > 0.4) {
+          // Relax the drift threshold to 2.5s to prevent constant stuttering and buffering
+          if (diff > 2.5) {
             setAudioElapsedSeconds(compensatedTime);
             if (youtubeSeekRef.current) {
               youtubeSeekRef.current(compensatedTime);
