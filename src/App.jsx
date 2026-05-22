@@ -609,9 +609,16 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       })
       .on('broadcast', { event: 'sync-data' }, ({ payload }) => {
         if (!canControlPlaybackRef.current && payload?.time !== undefined) {
-          setAudioElapsedSeconds(payload.time);
-          if (youtubeSeekRef.current) {
-            youtubeSeekRef.current(payload.time);
+          // Compensate for network transit and YouTube buffering time (approx ~0.35s total)
+          const compensatedTime = payload.time + 0.35;
+          const diff = Math.abs(audioElapsedRef.current - compensatedTime);
+          
+          // Tighten the drift threshold to 0.4s for near-perfect alignment
+          if (diff > 0.4) {
+            setAudioElapsedSeconds(compensatedTime);
+            if (youtubeSeekRef.current) {
+              youtubeSeekRef.current(compensatedTime);
+            }
           }
         }
       })
@@ -627,7 +634,19 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
     syncChannelRef.current = channel;
 
+    // Heartbeat Sync: DJ broadcasts precise time every 2 seconds to correct drift
+    const heartbeatInterval = setInterval(() => {
+      if (canControlPlaybackRef.current) {
+        channel.send({
+          type: 'broadcast',
+          event: 'sync-data',
+          payload: { time: audioElapsedRef.current }
+        });
+      }
+    }, 2000);
+
     return () => {
+      clearInterval(heartbeatInterval);
       supabase.removeChannel(channel);
       syncChannelRef.current = null;
     };
@@ -1423,8 +1442,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   // Format Helper: Seconds to MM:SS
   const formatTime = (secs) => {
+    if (!secs || isNaN(secs)) return '0:00';
     const m = Math.floor(secs / 60);
-    const s = secs % 60;
+    const s = Math.floor(secs % 60);
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
@@ -1727,7 +1747,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             activeRoomCode={activeRoomCode}
             onJoinRoom={handleJoinRoom}
             authDisplayName={authDisplayName}
-            onTimeUpdate={(t) => setAudioElapsedSeconds(Math.floor(t))}
+            onTimeUpdate={(t) => setAudioElapsedSeconds(t)}
             onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
             onRegisterVolume={(fn) => { youtubeVolumeRef.current = fn; }}
             isHost={isHost}

@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const youtubeDl = require('youtube-dl-exec').create(process.env.YOUTUBE_DL_BINARY || 'yt-dlp');
+const play = require('play-dl');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
@@ -55,48 +55,11 @@ app.get('/api/youtube/stream/:videoId', async (req, res) => {
 
   try {
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    console.log(`\uD83C\uDFB5 Extracting stream for: ${videoId}`);
+    console.log(`🎵 Extracting stream for: ${videoId}`);
 
-    const dlOptions = {
-      dumpSingleJson: true,
-      format: 'bestaudio/best',
-      extractorArgs: 'youtube:player_client=android_vr,tv_embedded,default',
-      quiet: true,
-      noWarnings: true,
-    };
+    const streamInfo = await play.stream(youtubeUrl, { discordPlayerCompatibility: false });
 
-    // Use cookies if the file exists to bypass YouTube bot detection
-    // Render mounts Secret Files in Docker at /etc/secrets/
-
-
-    // let cookiesPath = process.env.YOUTUBE_COOKIES_PATH;
-    // if (!cookiesPath && fs.existsSync('/etc/secrets/cookies.txt')) {
-    //   cookiesPath = '/etc/secrets/cookies.txt';
-    // } else if (!cookiesPath && fs.existsSync(path.join(__dirname, 'cookies.txt'))) {
-    //   cookiesPath = path.join(__dirname, 'cookies.txt');
-    // }
-
-    // if (cookiesPath && fs.existsSync(cookiesPath)) {
-    //   // yt-dlp attempts to write back to the cookies file to keep session tokens fresh.
-    //   // Since /etc/secrets/ is a read-only file system, we must provide a writable copy.
-    //   const writableCookiesPath = path.join(require('os').tmpdir(), 'yt_cookies.txt');
-    //   try {
-    //     if (!fs.existsSync(writableCookiesPath)) {
-    //       fs.copyFileSync(cookiesPath, writableCookiesPath);
-    //     }
-    //     dlOptions.cookies = writableCookiesPath;
-    //   } catch (err) {
-    //     console.error('Failed to copy cookies to writable path:', err);
-    //     dlOptions.cookies = cookiesPath;
-    //   }
-    // }
-
-
-
-    // Get stream info as JSON (no getUrl flag - they conflict with dumpSingleJson)
-    const info = await youtubeDl(youtubeUrl, dlOptions);
-
-    const streamUrl = info?.url;
+    const streamUrl = streamInfo?.url;
     if (!streamUrl) {
       return res.status(404).json({
         error: 'Could not extract stream URL from this video'
@@ -174,21 +137,16 @@ app.get('/api/youtube/metadata/:videoId', async (req, res) => {
 
     console.log(`Extracting metadata for video: ${videoId}`);
 
-    const info = await youtubeDl(youtubeUrl, {
-      quiet: true,
-      noWarnings: true,
-      dumpSingleJson: true,
-      noPlaylist: true,
-    });
+    const info = await play.video_info(youtubeUrl);
 
     res.json({
       success: true,
-      title: info.title || 'Unknown',
-      duration: info.duration || null,
-      channelTitle: info.channel || info.uploader || 'Unknown',
-      description: info.description || '',
-      thumbnail: info.thumbnail || null,
-      uploadDate: info.upload_date || null
+      title: info.video_details.title || 'Unknown',
+      duration: info.video_details.durationInSec || null,
+      channelTitle: info.video_details.channel?.name || 'Unknown',
+      description: info.video_details.description || '',
+      thumbnail: info.video_details.thumbnails[0]?.url || null,
+      uploadDate: info.video_details.uploadedAt || null
     });
 
   } catch (error) {
@@ -226,24 +184,19 @@ app.post('/api/youtube/info', async (req, res) => {
 
     console.log(`Extracting full info for video: ${videoId}`);
 
-    // Get full info including stream URL
-    const info = await youtubeDl(youtubeUrl, {
-      quiet: true,
-      noWarnings: true,
-      dumpSingleJson: true,
-      format: 'bestaudio[ext=m4a]/bestaudio',
-    });
+    const info = await play.video_info(youtubeUrl);
+    const streamInfo = await play.stream(youtubeUrl, { discordPlayerCompatibility: false });
 
     res.json({
       success: true,
-      title: info.title || 'Unknown',
-      duration: info.duration || null,
-      artist: info.channel || info.uploader || 'Unknown',
-      description: info.description || '',
-      thumbnail: info.thumbnail || null,
-      url: info.url || null,
-      format: info.format || 'audio/mp4',
-      ext: info.ext || 'm4a'
+      title: info.video_details.title || 'Unknown',
+      duration: info.video_details.durationInSec || null,
+      artist: info.video_details.channel?.name || 'Unknown',
+      description: info.video_details.description || '',
+      thumbnail: info.video_details.thumbnails[0]?.url || null,
+      url: streamInfo?.url || null,
+      format: streamInfo?.type || 'audio/mp4',
+      ext: 'm4a'
     });
 
   } catch (error) {
