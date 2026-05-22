@@ -58,7 +58,8 @@ export default function YouTubeAudioPlayer({
           rel: 0,
           showinfo: 0,
           iv_load_policy: 3,
-          playsinline: 1
+          playsinline: 1,
+          mute: 1
         },
         events: {
           onReady: (event) => {

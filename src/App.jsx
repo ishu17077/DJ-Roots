@@ -499,6 +499,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [audioElapsedSeconds, setAudioElapsedSeconds] = useState(0);
+  const syncChannelRef = useRef(null);
+  const audioElapsedRef = useRef(0);
+  useEffect(() => { audioElapsedRef.current = audioElapsedSeconds; }, [audioElapsedSeconds]);
   const [searchFilterText, setSearchFilterText] = useState('');
   const [webcamActive, setWebcamActive] = useState(false);
   const [hypeModeOn, setHypeModeOn] = useState(false);
@@ -583,6 +586,52 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const isCurrentDJ = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
   const isCoHost = currentUserMember?.role === 'CO Host';
   const canControlPlayback = isHost || isCurrentDJ || isCoHost;
+  const canControlPlaybackRef = useRef(false);
+  useEffect(() => { canControlPlaybackRef.current = canControlPlayback; }, [canControlPlayback]);
+
+  // --- SYNC PLAYBACK TIME FOR LATE JOINERS ---
+  useEffect(() => {
+    if (!activeRoomCode || !supabaseRoom?.id) return;
+    
+    const channel = supabase.channel(`sync-${supabaseRoom.id}`, {
+      config: { broadcast: { self: false } }
+    });
+
+    channel
+      .on('broadcast', { event: 'request-sync' }, () => {
+        if (canControlPlaybackRef.current) {
+          channel.send({
+            type: 'broadcast',
+            event: 'sync-data',
+            payload: { time: audioElapsedRef.current }
+          });
+        }
+      })
+      .on('broadcast', { event: 'sync-data' }, ({ payload }) => {
+        if (!canControlPlaybackRef.current && payload?.time !== undefined) {
+          setAudioElapsedSeconds(payload.time);
+          if (youtubeSeekRef.current) {
+            youtubeSeekRef.current(payload.time);
+          }
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED' && !canControlPlaybackRef.current) {
+          channel.send({
+            type: 'broadcast',
+            event: 'request-sync',
+            payload: {}
+          });
+        }
+      });
+
+    syncChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      syncChannelRef.current = null;
+    };
+  }, [activeRoomCode, supabaseRoom?.id]);
 
   const currentTrack = useMemo(() => {
     const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: null, userAvatar: null };
@@ -1253,6 +1302,14 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     } else {
       triggerOscillatorTone(currentTrack.pitch * 1.3, 0.25, 'triangle');
     }
+
+    if (activeRoomCode && syncChannelRef.current) {
+      syncChannelRef.current.send({
+        type: 'broadcast',
+        event: 'sync-data',
+        payload: { time: newSeconds }
+      });
+    }
   };
 
   // --- COMPONENT LIFECYCLE EFFECTS ---
@@ -1381,7 +1438,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#030307] cursor-pointer group transition-opacity duration-1000"
           onClick={() => {
             setHasEntered(true);
-            setIsMuted(false);
+            // We NO LONGER auto-unmute here. We wait for explicit "Tap to Unmute" from HUD to bypass mobile autoplay restrictions.
           }}
         >
           {/* Subtle Ambient Glow */}
