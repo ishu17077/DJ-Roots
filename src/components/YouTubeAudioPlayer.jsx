@@ -37,9 +37,15 @@ export default function YouTubeAudioPlayer({
 
   // Use refs for callbacks to avoid stale closures in YT player events
   const callbacksRef = useRef({ onPlay, onPause, onEnded, onError, onTimeUpdate });
+  const isPlayingRef = useRef(isPlaying);
+  
   useEffect(() => {
     callbacksRef.current = { onPlay, onPause, onEnded, onError, onTimeUpdate };
   }, [onPlay, onPause, onEnded, onError, onTimeUpdate]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Initialize YouTube IFrame API
   useEffect(() => {
@@ -117,6 +123,107 @@ export default function YouTubeAudioPlayer({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // --- BACKGROUND TAB KEEP-ALIVE (TWO-PRONGED APPROACH) ---
+  //
+  // PROBLEM: Chrome throttles setInterval/setTimeout in minimized/background tabs,
+  // so a normal watchdog becomes useless. YouTube also pauses embedded videos in hidden tabs.
+  //
+  // SOLUTION 1 — Web Worker heartbeat:
+  //   Web Workers run in a separate thread that Chrome does NOT throttle.
+  //   The worker sends a 'ping' every 1s. The main thread receives it and
+  //   force-plays the YouTube player if it has been unexpectedly paused.
+  //
+  // SOLUTION 2 — Silent audio loop:
+  //   Playing a 1-second silent audio clip on repeat registers this tab as an
+  //   "active audio tab" with the browser. Chrome will not aggressively throttle
+  //   or background-pause active audio tabs.
+  const workerRef = useRef(null);
+  const silentAudioRef = useRef(null);
+
+  useEffect(() => {
+    // --- Silent audio loop ---
+    // A minimal 1-second silent WAV encoded as a data URI
+    const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    const silentAudio = new Audio(SILENT_WAV);
+    silentAudio.loop = true;
+    silentAudio.volume = 0.001; // Essentially silent but browser counts it as active audio
+    silentAudioRef.current = silentAudio;
+
+    // Start silent audio the first time user interacts (required by browser autoplay policy)
+    const startSilentAudio = () => {
+      silentAudio.play().catch(() => {}); // Ignore errors — will retry on next interaction
+      document.removeEventListener('click', startSilentAudio);
+      document.removeEventListener('keydown', startSilentAudio);
+    };
+    document.addEventListener('click', startSilentAudio, { once: true });
+    document.addEventListener('keydown', startSilentAudio, { once: true });
+
+    // --- Web Worker heartbeat ---
+    try {
+      const workerBlob = new Blob([
+        `let iv=null;
+         self.onmessage=(e)=>{
+           if(e.data==='start'){if(iv)return;iv=setInterval(()=>self.postMessage('ping'),1000);}
+           else if(e.data==='stop'){clearInterval(iv);iv=null;}
+         };`
+      ], { type: 'application/javascript' });
+      const worker = new Worker(URL.createObjectURL(workerBlob));
+
+      worker.onmessage = () => {
+        // This runs every 1s, even in background/minimized tabs!
+        if (
+          isPlayingRef.current &&
+          playerRef.current &&
+          typeof playerRef.current.getPlayerState === 'function'
+        ) {
+          const state = playerRef.current.getPlayerState();
+          // PlayerState: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
+          if (state === 2) {
+            // Paused but should be playing — YouTube background-throttled us. Force resume!
+            playerRef.current.playVideo();
+          }
+        }
+      };
+
+      worker.postMessage('start');
+      workerRef.current = worker;
+    } catch (err) {
+      console.warn('[KeepAlive] Web Worker failed, falling back to visibilitychange only:', err);
+    }
+
+    // --- Visibility change fallback ---
+    // Also resume immediately when user switches back to tab
+    const handleVisibilityChange = () => {
+      if (
+        !document.hidden &&
+        isPlayingRef.current &&
+        playerRef.current &&
+        typeof playerRef.current.getPlayerState === 'function'
+      ) {
+        const state = playerRef.current.getPlayerState();
+        if (state === 2 || state === 5 || state === -1) {
+          playerRef.current.playVideo();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      // Cleanup
+      if (workerRef.current) {
+        workerRef.current.postMessage('stop');
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      if (silentAudioRef.current) {
+        silentAudioRef.current.pause();
+        silentAudioRef.current = null;
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
 
   // Sync videoId
   useEffect(() => {
@@ -251,7 +358,7 @@ export default function YouTubeAudioPlayer({
 
   if (!showControls) {
     return (
-      <div className="fixed -top-[2000px] -left-[2000px] w-[200px] h-[200px] opacity-1 pointer-events-none z-0">
+      <div className="fixed top-0 left-0 w-[200px] h-[200px] opacity-[0.01] pointer-events-none z-[-1]">
         <div ref={containerRef} />
         {useFallback && streamUrl && (
           <audio
@@ -274,7 +381,7 @@ export default function YouTubeAudioPlayer({
   return (
     <div className="w-full space-y-3 relative">
       {/* Invisible YouTube Player */}
-      <div className="fixed -top-[2000px] -left-[2000px] w-[200px] h-[200px] opacity-1 pointer-events-none z-0">
+      <div className="fixed top-0 left-0 w-[200px] h-[200px] opacity-[0.01] pointer-events-none z-[-1]">
         <div ref={containerRef} />
         {useFallback && streamUrl && (
           <audio
