@@ -9,6 +9,7 @@ import SettingsSection from './components/SettingsSection.jsx';
 import LobbyScreen from './components/LobbyScreen.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
 import LandingPage from './components/LandingPage.jsx';
+import ClickSpark from './components/ClickSpark.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 import { supabase } from './lib/supabase.js';
 import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
@@ -487,6 +488,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     handleAddSong: supabaseAddSong,
     handleRemoveSong: supabaseRemoveSong,
     handleUpdateRoom: supabaseUpdateRoom,
+    handleUpdateMemberRole,
   } = useSupabaseRoom(activeRoomCode, userProfile);
 
   // --- STATE ---
@@ -566,6 +568,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     localStorage.setItem('djroots_recent', JSON.stringify(recentlyPlayed));
   }, [recentlyPlayed]);
 
+  const [showChangeDJModal, setShowChangeDJModal] = useState(false);
+
 
   // --- Derived queue state (real data from Supabase, or local offline fallback) ---
   const queueList = activeRoomCode ? supabaseQueue : offlineQueue;
@@ -573,7 +577,12 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   // --- DERIVED MEMO STATES ---
   
-  const isHost = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
+  const currentUserMember = (supabaseMembers || []).find(m => m.profileId === userProfile?.id || m.profileId === userProfile?.profileId);
+  // isHost refers to the original room creator
+  const isHost = activeRoomCode && supabaseRoom ? currentUserMember?.role === 'Host' : true;
+  const isCurrentDJ = activeRoomCode && supabaseRoom ? userProfile?.profileId === supabaseRoom.host_id || userProfile?.id === supabaseRoom.host_id : true;
+  const isCoHost = currentUserMember?.role === 'CO Host';
+  const canControlPlayback = isHost || isCurrentDJ || isCoHost;
 
   const currentTrack = useMemo(() => {
     const fallback = { id: 'empty', title: 'No track playing', artist: 'Queue is empty or waiting', duration: 180, pitch: 220, bpm: 120, key: '-', img: null, userAvatar: null };
@@ -700,11 +709,11 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   // --- TIMERS & CONTROLLERS ---
   const togglePlayback = () => {
     // Non-hosts cannot control playback in a room
-    if (activeRoomCode && !isHost) return;
+    if (activeRoomCode && !canControlPlayback) return;
     initAudioEngine();
     if (activeRoomCode && supabaseRoom) {
-      if (!isHost) {
-        addToast('Permission Denied', 'Only the DJ can control playback.', false);
+      if (!canControlPlayback) {
+        addToast('Permission Denied', 'Only the DJ or CO Host can control playback.', false);
         return;
       }
       if (!supabaseRoom.current_track_id && queueList.length > 0) {
@@ -752,8 +761,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   const selectTrack = (id) => {
     if (activeRoomCode && supabaseRoom) {
-      if (!isHost) {
-        addToast('Permission Denied', 'Only the DJ can change tracks.', false);
+      if (!canControlPlayback) {
+        addToast('Permission Denied', 'Only the DJ or CO Host can change tracks.', false);
         return;
       }
       supabaseUpdateRoom({ current_track_id: id, is_playing: true });
@@ -775,7 +784,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   const prevTrack = () => {
-    if (activeRoomCode && supabaseRoom && !isHost) return;
+    if (activeRoomCode && supabaseRoom && !canControlPlayback) return;
     const currentIdx = queueList.findIndex(t => t.id === currentTrack.id);
     let target = currentIdx - 1;
     if (target < 0) target = queueList.length - 1;
@@ -783,7 +792,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   const nextTrack = () => {
-    if (activeRoomCode && supabaseRoom && !isHost) return;
+    if (activeRoomCode && supabaseRoom && !canControlPlayback) return;
     const currentIdx = queueList.findIndex(t => t.id === currentTrack.id);
     if (isShuffle) {
       const target = Math.floor(Math.random() * queueList.length);
@@ -1037,7 +1046,15 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   const requestNewDJ = () => {
-    addToast('DJ Rotation Triggered', 'Requesting next candidate in hierarchy hierarchy.', true);
+    setShowChangeDJModal(true);
+  };
+
+  const handleRoleChange = async (profileId, newRole) => {
+    if (newRole === 'member' && supabaseRoom?.host_id === profileId) {
+      await supabaseUpdateRoom({ host_id: userProfile?.profileId || userProfile?.id });
+      addToast('DJ Removed', 'User was removed from the DJ role automatically.', true);
+    }
+    await handleUpdateMemberRole(profileId, newRole);
   };
 
   // --- WEBCAM STREAM CONTROLLER ---
@@ -1355,6 +1372,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   };
 
   return (
+    <ClickSpark>
     <div className="h-screen w-screen flex flex-col justify-between overflow-hidden select-none bg-[#030307] text-[#e4e4e7] relative">
       
       {/* ENTER WORLD OVERLAY */}
@@ -1589,19 +1607,15 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                         <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
                         <Crown className="w-3 h-3 text-amber-400" />
                       </div>
-                      <div className="hud-font text-violet-400 text-xs font-bold">
-                        {formatTime(djTimerSeconds)} <span className="text-[9px] text-zinc-500">Left</span>
-                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={extendDJTime} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                      Extend
-                    </button>
-                    <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                      Change
-                    </button>
-                  </div>
+                  {isHost && (
+                    <div className="flex gap-1 mt-1">
+                      <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                        Change
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1763,6 +1777,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               isPlaying={isPlaying}
               roomCode={activeRoomCode}
               members={supabaseMembers}
+              isHost={isHost}
+              onUpdateRole={handleRoleChange}
             />
           ) : null
         }
@@ -1789,7 +1805,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
         {/* Center Timeline Playback sliders */}
         <div className="flex flex-col items-center gap-2 w-full md:max-w-[450px]">
-          {isHost ? (
+          {canControlPlayback ? (
             <div className="flex items-center gap-4.5">
               <button onClick={toggleShuffle} className={`p-1 transition-all ${isShuffle ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
                 <Shuffle className="w-3.5 h-3.5" />
@@ -1821,8 +1837,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           <div className="flex items-center gap-3 w-full text-[10px]">
             <span className="hud-font text-zinc-500">{formatTime(audioElapsedSeconds)}</span>
             <div
-              onClick={isHost ? seekTimeline : undefined}
-              className={`flex-1 h-1 bg-zinc-900 rounded-full ${isHost ? 'cursor-pointer' : 'cursor-default'} relative border border-zinc-800/40`}
+              onClick={canControlPlayback ? seekTimeline : undefined}
+              className={`flex-1 h-1 bg-zinc-900 rounded-full ${canControlPlayback ? 'cursor-pointer' : 'cursor-default'} relative border border-zinc-800/40`}
             >
               <div
                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-600 to-emerald-500 rounded-full"
@@ -1901,6 +1917,61 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         </div>
       </div >
 
+      {/* CHANGE DJ MODAL */}
+      {showChangeDJModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-zinc-950 border border-zinc-900 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative z-50">
+            <h3 className="text-white font-black uppercase tracking-wider mb-2">Change DJ</h3>
+            <p className="text-zinc-400 text-xs mb-4">Select a CO Host to take over as DJ.</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+              {(supabaseMembers || []).filter(m => m.role === 'CO Host' && m.profileId !== userProfile?.id && m.profileId !== userProfile?.profileId).map(member => {
+                const isThisMemberDJ = member.profileId === supabaseRoom?.host_id;
+                return (
+                  <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/40 hover:bg-zinc-900 border border-zinc-800 transition-all">
+                    <div className="flex items-center gap-3">
+                      <img src={member.avatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                      <div>
+                        <div className="text-xs font-bold text-white">{member.name}</div>
+                        <div className="text-[10px] text-zinc-500">{member.role}</div>
+                      </div>
+                    </div>
+                    {isThisMemberDJ ? (
+                      <button 
+                        onClick={() => {
+                          supabaseUpdateRoom({ host_id: userProfile?.profileId || userProfile?.id });
+                          addToast('DJ Removed', `${member.name} is no longer the DJ.`, true);
+                          setShowChangeDJModal(false);
+                        }}
+                        className="bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        Remove DJ
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          supabaseUpdateRoom({ host_id: member.profileId });
+                          addToast('DJ Changed', `${member.name} is now the DJ.`, true);
+                          setShowChangeDJModal(false);
+                        }}
+                        className="bg-violet-600/20 text-violet-400 hover:bg-violet-600 hover:text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        Make DJ
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {(supabaseMembers || []).filter(m => m.role === 'CO Host' && m.profileId !== userProfile?.id && m.profileId !== userProfile?.profileId).length === 0 && (
+                <div className="text-center text-zinc-500 text-xs py-4">No CO Hosts available. Assign a CO Host from the People list first.</div>
+              )}
+            </div>
+            <button onClick={() => setShowChangeDJModal(false)} className="mt-4 w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-bold rounded-xl transition-all">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* TOAST SYSTEM ALERTS */}
       < div className="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none" >
         {
@@ -1922,5 +1993,6 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         }
       </div >
     </div >
+    </ClickSpark>
   );
 }

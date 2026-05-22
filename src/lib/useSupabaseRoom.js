@@ -12,6 +12,7 @@ import {
   subscribeToQueue,
   subscribeToMembers,
   subscribeToRoom,
+  updateMemberRole,
 } from './supabaseService.js';
 import { buildEmbedUrl } from './youtubeService.js';
 
@@ -63,7 +64,7 @@ function transformMember(member) {
     name: profile.name || 'Unknown',
     username: profile.username || '@unknown',
     avatar: profile.avatar_url || '',
-    role: member.role === 'host' ? 'Host' : member.role === 'dj_next' ? 'DJ Next' : 'Member',
+    role: member.role === 'host' ? 'Host' : member.role === 'co_host' ? 'CO Host' : 'Member',
     activity: member.activity || 'Joined the room',
     activityType: member.activity_type || 'joined',
     joined: formatRelativeTime(member.joined_at),
@@ -160,6 +161,9 @@ export function useSupabaseRoom(roomCode, userProfile) {
             
             const freshQueue = await fetchQueue(roomIdRef.current);
             if (isMounted) setQueueList(freshQueue.map(transformQueueItem));
+
+            const freshMembers = await fetchRoomMembers(roomIdRef.current);
+            if (isMounted) setMembers(freshMembers.map(transformMember));
           } catch (e) {
             console.error('Polling error:', e);
           }
@@ -212,6 +216,11 @@ export function useSupabaseRoom(roomCode, userProfile) {
     await markAsPlayed(queueItemId);
   }, [connected]);
 
+  const handleUpdateMemberRole = useCallback(async (profileId, role) => {
+    if (!connected || !roomIdRef.current) return;
+    await updateMemberRole(roomIdRef.current, profileId, role);
+  }, [connected]);
+
   return {
     room,
     queueList,
@@ -226,5 +235,6 @@ export function useSupabaseRoom(roomCode, userProfile) {
     handleRemoveSong,
     handleUpdateRoom,
     handleMarkAsPlayed,
+    handleUpdateMemberRole,
   };
 }
