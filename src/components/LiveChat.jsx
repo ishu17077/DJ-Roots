@@ -303,7 +303,7 @@ const CHAT_CSS = `
  *   roomId      string|null   — Supabase room UUID
  *   userProfile object|null  — { id, name, avatar_url }
  */
-export default function LiveChat({ roomId, userProfile }) {
+export default function LiveChat({ roomId, userProfile, canControlPlayback, onAddSong, onPlaySong }) {
   const {
     messages,
     loading,
@@ -420,6 +420,9 @@ export default function LiveChat({ roomId, userProfile }) {
             key={msg.id}
             message={msg}
             isOwn={msg.user_id === userProfile?.id}
+            canControlPlayback={canControlPlayback}
+            onAddSong={onAddSong}
+            onPlaySong={onPlaySong}
           />
         ))}
 

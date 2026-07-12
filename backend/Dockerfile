@@ -20,7 +20,6 @@ ENV YOUTUBE_DL_SKIP_DOWNLOAD=true
 
 RUN yt-dlp --version
 
-
 # Install dependencies
 RUN npm install
 

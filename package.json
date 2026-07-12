@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run backend\" \"vite\"",
+    "dev": "vite",
     "backend": "node backend/server.js",
     "frontend": "vite",
     "build": "vite build",

@@ -5,9 +5,3 @@ services:
     rootDir: backend
     plan: free
     healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: FRONTEND_URL
-        value: # ADD_YOUR_FRONTEND_URL_HERE
-      # Note: VITE_ variables are typically for the frontend, but if your backend needs any API keys, add them here.

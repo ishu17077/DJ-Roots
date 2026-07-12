@@ -15,8 +15,11 @@ export default function AddSongSection({
   searchFilterText,
   setSearchFilterText,
   filteredTrending,
+  searchResults = [],
+  isSearching = false,
   addSongFromPool,
   playSongFromPool,
+  onSuggestSong,
   songLinkInput,
   setSongLinkInput,
   handleAddTrackByUrl,
@@ -34,6 +37,11 @@ export default function AddSongSection({
     song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
     song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
   );
+  
+  const displayList = activeAddTab === 'library' 
+    ? filteredRecent 
+    : (searchFilterText.trim().length > 2 ? searchResults : filteredTrending);
+
   return (
     <>
       <main className="flex-1 flex flex-col gap-4 min-h-0">
@@ -94,8 +102,13 @@ export default function AddSongSection({
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-                  {(activeAddTab === 'library' ? filteredRecent : filteredTrending).length > 0 ? (
-                    (activeAddTab === 'library' ? filteredRecent : filteredTrending).map((song) => (
+                  {isSearching ? (
+                    <div className="col-span-5 text-center py-10 text-zinc-500 text-xs flex flex-col items-center justify-center gap-3">
+                      <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+                      Searching YouTube...
+                    </div>
+                  ) : displayList.length > 0 ? (
+                    displayList.map((song) => (
                       <div key={song.id} className="bg-zinc-900/10 border border-zinc-900 p-2 rounded-xl flex flex-col justify-between gap-3 group hover:border-zinc-800 transition-all">
                         <div className="space-y-2">
                           <div className="aspect-square w-full rounded-lg overflow-hidden relative">
@@ -107,25 +120,41 @@ export default function AddSongSection({
                           </div>
                         </div>
                         {activeAddTab === 'library' ? (
-                          <button
-                            onClick={() => playSongFromPool(song)}
-                            className="w-full bg-violet-600 border border-violet-500 hover:bg-violet-500 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-white transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-900/50"
-                          >
-                            <PlayCircle className="w-3.5 h-3.5" /> Play
-                          </button>
-                        ) : (
                           <div className="flex gap-1.5 w-full">
                             <button
-                              onClick={() => addSongFromPool(song)}
-                              className="flex-1 bg-violet-600/10 border border-violet-500/20 hover:bg-violet-600 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-violet-400 transition-all flex items-center justify-center gap-1"
+                              onClick={() => onSuggestSong && onSuggestSong(song)}
+                              className="flex-1 bg-blue-600/10 border border-blue-500/20 hover:bg-blue-600 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-blue-400 transition-all flex items-center justify-center gap-1"
                             >
-                              <Plus className="w-3 h-3" /> Add
+                              Suggest
                             </button>
                             <button
                               onClick={() => playSongFromPool(song)}
                               className="flex-1 bg-violet-600 border border-violet-500 hover:bg-violet-500 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-white transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-900/50"
                             >
                               <PlayCircle className="w-3.5 h-3.5" /> Play
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5 w-full">
+                            <div className="flex gap-1.5 w-full">
+                              <button
+                                onClick={() => addSongFromPool(song)}
+                                className="flex-1 bg-violet-600/10 border border-violet-500/20 hover:bg-violet-600 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-violet-400 transition-all flex items-center justify-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" /> Add
+                              </button>
+                              <button
+                                onClick={() => playSongFromPool(song)}
+                                className="flex-1 bg-violet-600 border border-violet-500 hover:bg-violet-500 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-white transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-900/50"
+                              >
+                                <PlayCircle className="w-3.5 h-3.5" /> Play
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => onSuggestSong && onSuggestSong(song)}
+                              className="w-full bg-blue-600/10 border border-blue-500/20 hover:bg-blue-600 hover:text-white text-[10px] font-black py-1.5 rounded-lg text-blue-400 transition-all flex items-center justify-center gap-1"
+                            >
+                              Suggest in Chat
                             </button>
                           </div>
                         )}

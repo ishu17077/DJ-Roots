@@ -87,7 +87,6 @@ npm run dev
 *(The frontend will run on `http://localhost:5173`)*
 
 ---
-
 ## 🎮 How to Test / Evaluate
 
 1. Open `http://localhost:5173` in your browser.

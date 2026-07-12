@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import YouTubeAudioPlayer from './YouTubeAudioPlayer.jsx';
+import LiveChat from './LiveChat.jsx';
 import {
     Activity,
     Music,
@@ -21,6 +22,11 @@ export default function HomeSection({
     onRegisterSeek = () => {},
     onRegisterVolume = () => {},
     nextTrack = () => {},
+    roomId,
+    userProfile,
+    canControlPlayback,
+    onAddSong,
+    onPlaySong,
 }) {
     // Point directly at the backend proxy — it streams audio through itself to avoid CORS
     const BACKEND = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -60,7 +66,7 @@ export default function HomeSection({
             )}
 
             {/* Content split */}
-            <div className="flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10 px-6 lg:px-16">
+            <div className={`flex-1 flex flex-col lg:flex-row items-center justify-between w-full min-h-0 relative gap-8 lg:gap-16 z-10 px-6 lg:px-16 ${roomId ? 'xl:pr-[340px]' : ''}`}>
 
                 {/* Left Side: Vinyl CD — always visible */}
                 <div className="w-full lg:w-1/2 flex items-center justify-center relative h-full min-h-0 shrink-1">
@@ -176,6 +182,19 @@ export default function HomeSection({
                     </div>
                 </div>
             </div>
+
+            {/* Live Chat Overlay */}
+            {roomId && (
+                <div className="hidden xl:flex absolute right-6 top-6 bottom-6 w-80 z-40 transition-all duration-500 ease-in-out transform shadow-[0_0_40px_rgba(0,0,0,0.5)] rounded-[18px]">
+                    <LiveChat 
+                        roomId={roomId} 
+                        userProfile={userProfile} 
+                        canControlPlayback={canControlPlayback}
+                        onAddSong={onAddSong}
+                        onPlaySong={onPlaySong}
+                    />
+                </div>
+            )}
         </main>
     );
 }
