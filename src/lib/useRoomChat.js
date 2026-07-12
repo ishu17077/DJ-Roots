@@ -99,7 +99,7 @@ export function useRoomChat(roomId, userProfile) {
 
   // ── 3. Send with optimistic UI ───────────────────────────────────────────
   const send = useCallback(async (text) => {
-    const trimmed = (text || '').trim().slice(0, 250);
+    const trimmed = (text || '').trim().slice(0, 2000);
     if (!trimmed || !roomId || !userProfile?.id || sending) return;
 
     const optimisticId = `opt-${Date.now()}-${Math.random()}`;
