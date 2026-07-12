@@ -1008,7 +1008,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
   };
 
-  const playSongFromPool = (song) => {
+  const playSongFromPool = async (song) => {
     if (activeRoomCode && !isHost) {
       addToast('Permission Denied', 'Only the DJ can change tracks.', false);
       return;
@@ -1040,8 +1040,16 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       setQueueList(prev => [...prev, newSong]);
       
       if (activeRoomCode && supabaseConnected) {
-        supabaseAddSong(newSong);
-        supabaseUpdateRoom({ current_track_id: newSong.id, is_playing: true });
+        // Await the insert so we get the true database UUID for the track
+        const dbItem = await supabaseAddSong(newSong);
+        if (dbItem && dbItem.id) {
+          // Replace the optimistic temporary ID with the real database ID so selectTrack resolves instantly
+          setQueueList(prev => prev.map(q => q.id === newSong.id ? { ...q, id: dbItem.id } : q));
+          supabaseUpdateRoom({ current_track_id: dbItem.id, is_playing: true });
+        } else {
+          // Fallback if dbItem is missing for some reason
+          supabaseUpdateRoom({ current_track_id: newSong.id, is_playing: true });
+        }
         setAudioElapsedSeconds(0);
         addToast('Track Changed', `Selected: ${newSong.title}`);
       } else {
