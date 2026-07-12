@@ -208,6 +208,50 @@ app.post('/api/youtube/info', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/youtube/oembed/:videoId
+ * Fetches YouTube oEmbed metadata server-side (no CORS issues)
+ * Returns: { title, author_name, thumbnail_url }
+ */
+app.get('/api/youtube/oembed/:videoId', async (req, res) => {
+  const { videoId } = req.params;
+
+  if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    return res.status(400).json({ error: 'Invalid video ID' });
+  }
+
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+
+    const oembedRes = await new Promise((resolve, reject) => {
+      https.get(oembedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; DJ-Roots/1.0)',
+        }
+      }, (r) => {
+        let data = '';
+        r.on('data', chunk => data += chunk);
+        r.on('end', () => resolve({ status: r.statusCode, body: data }));
+      }).on('error', reject);
+    });
+
+    if (oembedRes.status !== 200) {
+      return res.status(404).json({ error: 'Video not found or not embeddable' });
+    }
+
+    const parsed = JSON.parse(oembedRes.body);
+    res.json({
+      success: true,
+      title: parsed.title,
+      author_name: parsed.author_name,
+      thumbnail_url: parsed.thumbnail_url,
+    });
+  } catch (error) {
+    console.error(`oEmbed fetch error for ${videoId}:`, error.message);
+    res.status(500).json({ error: 'Failed to fetch oEmbed metadata', message: error.message });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
