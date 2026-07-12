@@ -55,8 +55,9 @@ export async function sendMessage({ roomId, userId, username, avatarUrl, message
  * @returns {Function}          Call this to unsubscribe and clean up.
  */
 export function subscribeToMessages(roomId, onMessage) {
+  const uniqueId = Math.random().toString(36).substring(2, 9);
   const channel = supabase
-    .channel(`chat-${roomId}`)
+    .channel(`chat-${roomId}-${uniqueId}`)
     .on(
       'postgres_changes',
       {

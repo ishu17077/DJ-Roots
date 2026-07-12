@@ -252,6 +252,34 @@ app.get('/api/youtube/oembed/:videoId', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/youtube/search
+ * Searches YouTube for videos using play-dl
+ */
+app.get('/api/youtube/search', async (req, res) => {
+  const query = req.query.q;
+  if (!query) {
+    return res.status(400).json({ error: 'Query is required' });
+  }
+
+  try {
+    const results = await play.search(query, { limit: 15, source: { youtube: 'video' } });
+    
+    const formattedResults = results.map(video => ({
+      videoId: video.id,
+      title: video.title,
+      duration: video.durationInSec,
+      channelTitle: video.channel?.name || 'Unknown',
+      thumbnail: video.thumbnails?.[0]?.url || null,
+    }));
+
+    res.json({ success: true, results: formattedResults });
+  } catch (error) {
+    console.error(`Search error for "${query}":`, error.message);
+    res.status(500).json({ error: 'Search failed', message: error.message });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({

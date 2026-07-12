@@ -305,3 +305,78 @@ export const processYouTubeUrl = async (url) => {
     };
   }
 };
+
+/**
+ * Search YouTube for a song query
+ * @param {string} query - The search query
+ * @returns {Promise<Array>} - Array of formatted song objects
+ */
+export const searchYouTube = async (query) => {
+  if (!query || !query.trim()) return [];
+  
+  // Try backend first since it doesn't need API keys and handles scraping natively
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const response = await fetch(`${backendUrl}/api/youtube/search?q=${encodeURIComponent(query)}`, {
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        'ngrok-skip-browser-warning': '69420',
+        'bypass-tunnel-reminder': 'asddsa',
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.results) {
+        return data.results.map(item => ({
+          id: `youtube-${item.videoId}`,
+          title: item.title,
+          artist: item.channelTitle || extractArtistFromTitle(item.title),
+          duration: item.duration || 180,
+          img: item.thumbnail || getThumbnailUrl(item.videoId),
+          youtubeVideoId: item.videoId,
+          source: 'youtube',
+          pitch: 260,
+          bpm: 120,
+          key: 'G Min',
+          votes: 1
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Backend search failed:', e);
+  }
+
+  // Fallback to Data API v3 if key exists
+  if (YOUTUBE_API_KEY) {
+    try {
+      const params = new URLSearchParams({
+        part: 'snippet',
+        q: query,
+        type: 'video',
+        maxResults: '15',
+        key: YOUTUBE_API_KEY,
+      });
+      const response = await fetch(`${YOUTUBE_VIDEOS_URL.replace('/videos', '/search')}?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.items.map(item => ({
+          id: `youtube-${item.id.videoId}`,
+          title: item.snippet.title,
+          artist: item.snippet.channelTitle || extractArtistFromTitle(item.snippet.title),
+          duration: 180, // search api doesn't return duration, default to 3m
+          img: item.snippet.thumbnails?.high?.url || getThumbnailUrl(item.id.videoId),
+          youtubeVideoId: item.id.videoId,
+          source: 'youtube',
+          pitch: 260,
+          bpm: 120,
+          key: 'G Min',
+          votes: 1
+        }));
+      }
+    } catch (e) {
+      console.warn('YouTube API v3 search failed:', e);
+    }
+  }
+  
+  return [];
+};

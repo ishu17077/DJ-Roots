@@ -28,7 +28,7 @@ function initials(name = '') {
  * No dangerouslySetInnerHTML — XSS-safe by design.
  */
 const ChatMessage = memo(
-  function ChatMessage({ message, isOwn }) {
+  function ChatMessage({ message, isOwn, canControlPlayback, onAddSong, onPlaySong }) {
     const cls = [
       'djr-msg',
       isOwn ? 'djr-msg--own' : '',
@@ -36,6 +36,16 @@ const ChatMessage = memo(
     ]
       .filter(Boolean)
       .join(' ');
+
+    const suggestionMatch = message.message.match(/^\[SUGGESTION:(.+)\]$/);
+    let suggestionSong = null;
+    if (suggestionMatch) {
+      try {
+        suggestionSong = JSON.parse(suggestionMatch[1]);
+      } catch (e) {
+        // fallback to normal text if JSON fails
+      }
+    }
 
     return (
       <div className={cls} role="listitem">
@@ -66,8 +76,29 @@ const ChatMessage = memo(
               </span>
             )}
           </div>
-          {/* Plain text — no dangerouslySetInnerHTML, safe from XSS */}
-          <div className="djr-msg__bubble">{message.message}</div>
+          {/* Plain text or custom suggestion widget */}
+          <div className="djr-msg__bubble" style={{ padding: suggestionSong ? '8px' : '5px 8px' }}>
+            {suggestionSong ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 700 }}>Suggested a track:</span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <img src={suggestionSong.img} alt="" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
+                  <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+                    <div style={{ fontWeight: '800', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'white' }}>{suggestionSong.title}</div>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggestionSong.artist}</div>
+                  </div>
+                </div>
+                {canControlPlayback && (
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                     <button onClick={() => onAddSong && onAddSong(suggestionSong)} style={{ flex: 1, padding: '6px', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: '#a78bfa', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>Add to Queue</button>
+                     <button onClick={() => onPlaySong && onPlaySong(suggestionSong)} style={{ flex: 1, padding: '6px', background: '#8b5cf6', border: 'none', borderRadius: '6px', color: 'white', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>Play Now</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              message.message
+            )}
+          </div>
         </div>
       </div>
     );

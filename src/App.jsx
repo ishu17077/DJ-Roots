@@ -14,10 +14,11 @@ import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 import { useReactions } from './lib/useReactions.js';
 import { supabase } from './lib/supabase.js';
 import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
-import { isValidYouTubeUrl, createSongFromYouTube, extractVideoId } from './lib/youtubeService.js';
+import { isValidYouTubeUrl, createSongFromYouTube, extractVideoId, searchYouTube } from './lib/youtubeService.js';
 import FloatingReactionContainer from './components/FloatingReactionContainer.jsx';
 import ReactionBar from './components/ReactionBar.jsx';
 import LiveChat from './components/LiveChat.jsx';
+import { sendMessage } from './lib/chatService.js';
 
 // --- ZERO-DEPENDENCY FUTURISTIC SVG ICON COMPONENT ---
 // Replaces lucide-react to ensure instant rendering in sandboxes
@@ -512,6 +513,8 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const audioElapsedRef = useRef(0);
   useEffect(() => { audioElapsedRef.current = audioElapsedSeconds; }, [audioElapsedSeconds]);
   const [searchFilterText, setSearchFilterText] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [webcamActive, setWebcamActive] = useState(false);
   const [hypeModeOn, setHypeModeOn] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -529,6 +532,21 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [hasMovedMouse, setHasMovedMouse] = useState(false);
   const [spectrumHeights, setSpectrumHeights] = useState(new Array(38).fill(4));
   const skipThreshold = 15;
+
+  useEffect(() => {
+    if (activeAddTab === 'search' && searchFilterText.trim().length > 2) {
+      setIsSearching(true);
+      const timer = setTimeout(async () => {
+        const results = await searchYouTube(searchFilterText);
+        setSearchResults(results);
+        setIsSearching(false);
+      }, 600);
+      return () => clearTimeout(timer);
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
+    }
+  }, [searchFilterText, activeAddTab]);
 
   // --- REFS ---
   const interactiveScreenRef = useRef(null);
@@ -1093,6 +1111,28 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       setQueueList(prev => prev.filter(song => song.id !== id));
     }
     addToast('Track Deleted', 'The song was removed from the queue.');
+  };
+
+  const handleSuggestSong = async (song) => {
+    if (!activeRoomCode || !supabaseRoom?.id) {
+      addToast('Error', 'You must be in a room to suggest songs.');
+      return;
+    }
+    const msg = `[SUGGESTION:${JSON.stringify(song)}]`;
+    try {
+      await sendMessage({
+        roomId: supabaseRoom.id,
+        userId: userProfile.id,
+        username: userProfile.name || 'Guest',
+        avatarUrl: userProfile.avatar_url || null,
+        message: msg
+      });
+      addToast('Suggestion Sent', `Suggested ${song.title} in the chat!`);
+      setActiveView('chat');
+    } catch (e) {
+      console.error(e);
+      addToast('Error', 'Failed to send suggestion.');
+    }
   };
 
   const toggleShuffle = () => {
@@ -1798,6 +1838,11 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
             onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
             onRegisterVolume={(fn) => { youtubeVolumeRef.current = fn; }}
             isHost={isHost}
+            roomId={supabaseRoom?.id || null}
+            userProfile={userProfile}
+            canControlPlayback={canControlPlayback}
+            onAddSong={addSongFromPool}
+            onPlaySong={playSongFromPool}
           />
         </div>
 
@@ -1809,8 +1854,11 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               searchFilterText={searchFilterText}
               setSearchFilterText={setSearchFilterText}
               filteredTrending={filteredTrending}
+              searchResults={searchResults}
+              isSearching={isSearching}
               addSongFromPool={addSongFromPool}
               playSongFromPool={playSongFromPool}
+              onSuggestSong={handleSuggestSong}
               songLinkInput={songLinkInput}
               setSongLinkInput={setSongLinkInput}
               handleAddTrackByUrl={handleAddTrackByUrl}
@@ -1918,6 +1966,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           <LiveChat
             roomId={supabaseRoom?.id || null}
             userProfile={userProfile}
+            canControlPlayback={canControlPlayback}
+            onAddSong={addSongFromPool}
+            onPlaySong={playSongFromPool}
           />
         </div>
 
