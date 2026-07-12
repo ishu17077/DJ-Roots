@@ -195,8 +195,8 @@ export function useSupabaseRoom(roomCode, userProfile) {
   }, [connected, currentUserId]);
 
   const handleAddSong = useCallback(async (songData) => {
-    if (!connected || !roomIdRef.current || !currentUserId) return;
-    await addSongToQueue(roomIdRef.current, songData, currentUserId);
+    if (!connected || !roomIdRef.current || !currentUserId) return null;
+    return await addSongToQueue(roomIdRef.current, songData, currentUserId);
   }, [connected, currentUserId]);
 
   const handleRemoveSong = useCallback(async (queueItemId) => {
