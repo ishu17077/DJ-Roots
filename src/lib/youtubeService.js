@@ -3,7 +3,8 @@
  */
 
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
-const YOUTUBE_API_BASE_URL = import.meta.env.VITE_YOUTUBE_API_BASE_URL || 'https://www.googleapis.com/youtube/v3';
+// Always use the videos endpoint directly - env var is ignored to avoid misconfiguration
+const YOUTUBE_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
 
 /**
  * Extract video ID from various YouTube URL formats
@@ -59,37 +60,31 @@ const parseIso8601DurationToSeconds = (isoDuration) => {
 };
 
 /**
- * Fetch video metadata from YouTube Data API v3.
- * Falls back to noembed if API key is not configured or request fails.
+ * Fetch video metadata. Priority:
+ * 1. YouTube Data API v3 (if API key configured)
+ * 2. Backend oEmbed proxy (server-side, no CORS)
+ * 3. Direct YouTube oEmbed (sometimes works)
+ * 4. noembed.com as last resort
  */
 export const fetchVideoMetadata = async (videoId) => {
-  if (!videoId) {
-    return getDefaultMetadata();
-  }
+  if (!videoId) return getDefaultMetadata();
 
-  try {
-    if (YOUTUBE_API_KEY) {
+  // 1. YouTube Data API v3
+  if (YOUTUBE_API_KEY) {
+    try {
       const params = new URLSearchParams({
         part: 'snippet,contentDetails,status',
         id: videoId,
         key: YOUTUBE_API_KEY,
       });
-
-      const response = await fetch(`${YOUTUBE_API_BASE_URL}/videos?${params.toString()}`);
-
+      const response = await fetch(`${YOUTUBE_VIDEOS_URL}?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         const item = data?.items?.[0];
-
-        if (item?.status?.embeddable === false) {
-          return {
-            ...getDefaultMetadata(videoId),
-            embeddable: false,
-            success: false,
-          };
-        }
-
         if (item) {
+          if (item.status?.embeddable === false) {
+            return { ...getDefaultMetadata(videoId), embeddable: false, success: false };
+          }
           const thumb =
             item.snippet?.thumbnails?.maxres?.url ||
             item.snippet?.thumbnails?.standard?.url ||
@@ -97,42 +92,73 @@ export const fetchVideoMetadata = async (videoId) => {
             item.snippet?.thumbnails?.medium?.url ||
             item.snippet?.thumbnails?.default?.url ||
             getThumbnailUrl(videoId);
-
           return {
             title: item.snippet?.title || 'Unknown Title',
             channelTitle: item.snippet?.channelTitle || 'Unknown Artist',
             duration: parseIso8601DurationToSeconds(item.contentDetails?.duration),
             thumbnail: thumb,
             videoId,
-            embeddable: item.status?.embeddable !== false,
+            embeddable: true,
             success: true,
           };
         }
-      } else {
-        console.warn('YouTube Data API request failed, falling back to noembed');
+      }
+    } catch (e) {
+      console.warn('YouTube API v3 failed:', e);
+    }
+  }
+
+  // 2. Backend oEmbed proxy (works when backend is running)
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const response = await fetch(`${backendUrl}/api/youtube/oembed/${videoId}`, {
+      headers: {
+        'ngrok-skip-browser-warning': '69420',
+        'bypass-tunnel-reminder': 'asddsa',
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.title) {
+        return {
+          title: data.title,
+          channelTitle: data.author_name || 'Unknown Artist',
+          duration: 180,
+          thumbnail: data.thumbnail_url || getThumbnailUrl(videoId),
+          videoId,
+          embeddable: true,
+          success: true,
+        };
       }
     }
-
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const fallbackResponse = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(youtubeUrl)}`);
-    if (!fallbackResponse.ok) {
-      return getDefaultMetadata(videoId);
-    }
-    const fallbackData = await fallbackResponse.json();
-
-    return {
-      title: fallbackData.title || 'Unknown Title',
-      channelTitle: fallbackData.author_name || 'Unknown Artist',
-      duration: 180,
-      thumbnail: fallbackData.thumbnail_url || getThumbnailUrl(videoId),
-      videoId,
-      embeddable: true,
-      success: true
-    };
-  } catch (error) {
-    console.warn('Error fetching YouTube metadata:', error);
-    return getDefaultMetadata(videoId);
+  } catch (e) {
+    console.warn('Backend oEmbed proxy failed:', e.message);
   }
+
+  // 3. noembed.com
+  try {
+    const noembedUrl = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
+    const response = await fetch(noembedUrl, { signal: AbortSignal.timeout(5000) });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.title && !data.title.toLowerCase().startsWith('youtube video')) {
+        return {
+          title: data.title,
+          channelTitle: data.author_name || 'Unknown Artist',
+          duration: 180,
+          thumbnail: data.thumbnail_url || getThumbnailUrl(videoId),
+          videoId,
+          embeddable: true,
+          success: true,
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('noembed fallback failed:', e.message);
+  }
+
+  return getDefaultMetadata(videoId);
 };
 
 /**

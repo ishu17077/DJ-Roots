@@ -11,9 +11,13 @@ import LoginScreen from './components/LoginScreen.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import ClickSpark from './components/ClickSpark.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
+import { useReactions } from './lib/useReactions.js';
 import { supabase } from './lib/supabase.js';
 import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
 import { isValidYouTubeUrl, createSongFromYouTube, extractVideoId } from './lib/youtubeService.js';
+import FloatingReactionContainer from './components/FloatingReactionContainer.jsx';
+import ReactionBar from './components/ReactionBar.jsx';
+import LiveChat from './components/LiveChat.jsx';
 
 // --- ZERO-DEPENDENCY FUTURISTIC SVG ICON COMPONENT ---
 // Replaces lucide-react to ensure instant rendering in sandboxes
@@ -490,6 +494,11 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
     handleUpdateRoom: supabaseUpdateRoom,
     handleUpdateMemberRole,
   } = useSupabaseRoom(activeRoomCode, userProfile);
+
+  // --- EMOJI REACTIONS ---
+  // Pass the room's Supabase UUID (not the short code) so the channel name is stable.
+  // In offline mode (no room) reactions still appear locally via the hook's local path.
+  const { reactions, sendReaction } = useReactions(supabaseRoom?.id || null, userProfile);
 
   // --- STATE ---
   const [activeView, setActiveView] = useState('home');
@@ -1218,13 +1227,17 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               lastGestureTimeRef.current = nowInMs;
               const fn = simulateGestureRef.current;
               if (!fn) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
-              if (gestureName === 'Thumb_Up') fn('swiperight');
-              else if (gestureName === 'Thumb_Down') fn('swipeleft');
+
+              // Standard gesture → action mapping
+              if      (gestureName === 'Thumb_Up')    fn('swiperight');
+              else if (gestureName === 'Thumb_Down')  fn('swipeleft');
               else if (gestureName === 'Closed_Fist') fn('fist');
-              else if (gestureName === 'Open_Palm') fn('palmup');
+              else if (gestureName === 'Open_Palm')   fn('palmup');
               else if (gestureName === 'Pointing_Up') fn('palmdown');
-              else if (gestureName === 'Victory') fn('swiperight');
-              else if (gestureName === 'ILoveYou') fn('palmup');
+              // Victory ✌️ — skip next track, just send 🎉 reaction
+              else if (gestureName === 'Victory')     sendReaction('🎉');
+              // ILoveYou 🤟 — volume up + ❤️ reaction (palmup already sends 👏 inside fn)
+              else if (gestureName === 'ILoveYou') { fn('palmup'); sendReaction('❤️'); }
             }
           }
         }
@@ -1238,14 +1251,26 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   }, [webcamActive]);
 
   // --- GESTURE SIMULATIONS ---
+  // Called by the rAF loop (via simulateGestureRef) and by the DJMode gesture buttons.
+  // Emoji reactions are sent here for button-triggered gestures so the same function
+  // covers both input paths without duplicating logic.
   const simulateGesture = (type) => {
     initAudioEngine();
-    const GESTURE_LABELS = { swiperight: '👍 Next Track', swipeleft: '👎 Prev Track', fist: '✊ Play/Pause', palmup: '🖐 Volume Up', palmdown: '☝ Volume Down' };
+    const GESTURE_LABELS = {
+      swiperight: '👍 Next Track',
+      swipeleft:  '👎 Prev Track',
+      fist:       '✊ Play/Pause',
+      palmup:     '🖐 Volume Up',
+      palmdown:   '☝ Volume Down',
+    };
     addToast('Gesture', GESTURE_LABELS[type] || type.toUpperCase());
 
-    if (type === 'swiperight') { nextTrack(); }
+    if (type === 'swiperight') {
+      nextTrack();
+      sendReaction('👍'); // Thumb Up → next track + 👍
+    }
     else if (type === 'swipeleft') { prevTrack(); }
-    else if (type === 'fist') { togglePlayback(); }
+    else if (type === 'fist')      { togglePlayback(); }
     else if (type === 'palmup') {
       setVolume(prev => {
         const next = Math.min(100, prev + 10);
@@ -1254,7 +1279,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         if (youtubeVolumeRef.current) youtubeVolumeRef.current(next / 100);
         return next;
       });
-    } else if (type === 'palmdown') {
+      sendReaction('👏'); // Open Palm → volume up + 👏
+    }
+    else if (type === 'palmdown') {
       setVolume(prev => {
         const next = Math.max(0, prev - 10);
         if (masterGainRef.current && audioCtxRef.current)
@@ -1264,7 +1291,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       });
     }
   };
-  // Keep the ref fresh on every render so the rAF loop always calls the latest version
+  // Keep the ref fresh so the rAF loop always calls the latest closure
   simulateGestureRef.current = simulateGesture;
 
   // --- SUBMIT ADD SONG MODAL ---
@@ -1464,6 +1491,9 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   return (
     <ClickSpark>
     <div className="h-screen w-screen flex flex-col justify-between overflow-hidden select-none bg-[#030307] text-[#e4e4e7] relative">
+
+      {/* FLOATING EMOJI REACTIONS OVERLAY — pointer-events:none, never blocks interaction */}
+      <FloatingReactionContainer reactions={reactions} />
       
       {/* ENTER WORLD OVERLAY */}
       {!hasEntered && (
@@ -1632,6 +1662,10 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                 )}
                 <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
                   <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
+                </button>
+                <button disabled={!activeRoomCode} onClick={() => { setActiveView('chat'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'chat' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                  <span style={{fontSize:'1rem', lineHeight:1}}>💬</span>
+                  <span>Live Chat</span>
                 </button>
 
               </nav>
@@ -1873,7 +1907,19 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           ) : null
         }
 
-
+        {/* LiveChat is persistently mounted so the realtime subscription and scroll
+             position survive tab switches. We toggle visibility via display. */}
+        <div style={{
+          display: activeView === 'chat' ? 'flex' : 'none',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}>
+          <LiveChat
+            roomId={supabaseRoom?.id || null}
+            userProfile={userProfile}
+          />
+        </div>
 
       </div >
 
@@ -1939,8 +1985,11 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
           </div>
         </div>
 
-        {/* Volume Control */}
+        {/* Volume Control + Reaction Bar */}
         <div className="flex items-center gap-2 flex-1 justify-end min-w-0 pr-2 w-full">
+          {/* Emoji Reactions — compact toggle in the footer */}
+          <ReactionBar onSend={sendReaction} compact />
+
           {isMuted && (
             <button
               onClick={() => setIsMuted(false)}
