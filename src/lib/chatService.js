@@ -27,7 +27,7 @@ export async function fetchMessages(roomId) {
  * @param {{ roomId, userId, username, avatarUrl, message }} opts
  */
 export async function sendMessage({ roomId, userId, username, avatarUrl, message }) {
-  const trimmed = message.trim().slice(0, 250);
+  const trimmed = message.trim().slice(0, 2000);
   if (!trimmed) return null;
 
   const { data, error } = await supabase

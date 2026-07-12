@@ -521,7 +521,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [toasts, setToasts] = useState([]);
   const [djTimerSeconds, setDjTimerSeconds] = useState(300);
   const [volume, setVolume] = useState(75);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
   const [waveformBars, setWaveformBars] = useState(new Array(45).fill(12));
   const [songLinkInput, setSongLinkInput] = useState('');
