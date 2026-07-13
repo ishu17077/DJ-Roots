@@ -1047,10 +1047,9 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
     }));
   };
 
-  const addSongFromPool = (song) => {
+  const addSongFromPool = async (song) => {
     // Supabase path — async add
     if (supabaseConnected) {
-      supabaseAddSong(song);
       const existing = queueList.find(q => q.title.toLowerCase() === song.title.toLowerCase());
       if (existing) {
         voteSong(existing.id, 1);
@@ -1069,6 +1068,10 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
         img: song.img,
         userAvatar: displayAvatar
       };
+      const dbItem = await supabaseAddSong(song);
+      if (dbItem && dbItem.id) {
+        newSong.id = dbItem.id;
+      }
       setQueueList(prev => [...prev, newSong]);
       addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
       return;
@@ -1170,13 +1173,16 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       const song = await createSongFromYouTube(videoId, userProfile?.name || 'Guest', displayAvatar);
 
       if (supabaseConnected) {
-        supabaseAddSong(song);
         const existing = queueList.find(q => q.youtubeVideoId && q.youtubeVideoId === song.youtubeVideoId);
         if (existing) {
           voteSong(existing.id, 1);
           addToast('Already Queued', `"${song.title}" vote increased.`);
           setSongLinkInput('');
           return;
+        }
+        const dbItem = await supabaseAddSong(song);
+        if (dbItem && dbItem.id) {
+          song.id = dbItem.id;
         }
         setQueueList(prev => [...prev, song]);
       } else {
