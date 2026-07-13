@@ -460,7 +460,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
     if (!activeRoomCode) {
       fetchPublicRooms().then(rooms => setPublicRooms(rooms || []));
       const interval = setInterval(() => {
-         fetchPublicRooms().then(rooms => setPublicRooms(rooms || []));
+        fetchPublicRooms().then(rooms => setPublicRooms(rooms || []));
       }, 15000);
       return () => clearInterval(interval);
     }
@@ -626,7 +626,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
   const setQueueList = activeRoomCode ? setSupabaseQueue : setOfflineQueue;
 
   // --- DERIVED MEMO STATES ---
-  
+
   const currentUserMember = (supabaseMembers || []).find(m => m.profileId === userProfile?.id || m.profileId === userProfile?.profileId);
   // isHost refers to the original room creator
   const isHost = activeRoomCode && supabaseRoom ? currentUserMember?.role === 'Host' : true;
@@ -639,7 +639,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
   // --- SYNC PLAYBACK TIME FOR LATE JOINERS ---
   useEffect(() => {
     if (!activeRoomCode || !supabaseRoom?.id) return;
-    
+
     const channel = supabase.channel(`sync-${supabaseRoom.id}`, {
       config: { broadcast: { self: false } }
     });
@@ -659,7 +659,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
           // Compensate for network transit and YouTube buffering time (approx ~0.35s total)
           const compensatedTime = payload.time + 0.35;
           const diff = Math.abs(audioElapsedRef.current - compensatedTime);
-          
+
           // Relax the drift threshold to 2.5s to prevent constant stuttering and buffering
           if (diff > 2.5) {
             setAudioElapsedSeconds(compensatedTime);
@@ -704,12 +704,12 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
     if (activeRoomCode && supabaseRoom) {
       return queueList.find(t => t.id === supabaseRoom.current_track_id) || fallback;
     }
-    
+
     if (localCurrentTrackId) {
       const found = queueList.find(t => t.id === localCurrentTrackId);
       if (found) return found;
     }
-    
+
     return queueList.length > 0 ? queueList[0] : fallback;
   }, [queueList, activeRoomCode, supabaseRoom, localCurrentTrackId]);
 
@@ -725,12 +725,12 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
   const isPlaying = activeRoomCode && supabaseRoom ? supabaseRoom.is_playing : localIsPlaying;
 
   const sortedAndFilteredQueue = useMemo(() => {
-    const sorted = activeRoomCode && supabaseRoom 
+    const sorted = activeRoomCode && supabaseRoom
       ? [...queueList].sort((a, b) => b.votes - a.votes)
       : [...queueList]; // Sequential order for Single Mode
-      
 
-      
+
+
     return sorted.filter(song =>
       song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
@@ -757,12 +757,50 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
   }, [queueList, currentTrack.id, activeRoomCode, supabaseRoom]);
 
 
+  const [trendingPool, setTrendingPool] = useState(TRENDING_POOL);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        // Search for dynamic official music videos while excluding common compilation keywords
+        const query = 'music -mix -compilation -playlist -full -album';
+        const results = await searchYouTube(query);
+
+        if (results && results.length > 0) {
+          // Filter out results that are obviously compilations based on title or excessive duration
+          const individualSongs = results.filter(song => {
+            const lowerTitle = song.title.toLowerCase();
+            const isCompilation = lowerTitle.includes('mix') ||
+              lowerTitle.includes('compilation') ||
+              lowerTitle.includes('top 50') ||
+              lowerTitle.includes('top 100') ||
+              lowerTitle.includes('playlist') ||
+              lowerTitle.includes('album') ||
+              lowerTitle.includes('hits of');
+
+            // If duration is provided (and not the fallback 180s), filter out videos > 7 minutes
+            const isTooLong = song.duration > 420 && song.duration !== 180;
+
+            return !isCompilation && !isTooLong;
+          });
+
+          if (individualSongs.length > 0) {
+            setTrendingPool(individualSongs.slice(0, 6)); // Show top 6
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch dynamic trending songs from YouTube, using fallback', err);
+      }
+    };
+    fetchTrending();
+  }, []);
+
   const filteredTrending = useMemo(() => {
-    return TRENDING_POOL.filter(song =>
+    return trendingPool.filter(song =>
       song.title.toLowerCase().includes(searchFilterText.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchFilterText.toLowerCase())
     );
-  }, [searchFilterText]);
+  }, [searchFilterText, trendingPool]);
 
   // --- HELPERS / ACTIONS ---
   const addToast = (title, desc, isSuccess = true) => {
@@ -908,7 +946,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
 
   const nextTrack = () => {
     if (activeRoomCode && supabaseRoom && !canControlPlayback) return;
-    
+
     if (isShuffle && queueList.length > 0) {
       const target = Math.floor(Math.random() * queueList.length);
       selectTrack(queueList[target].id);
@@ -917,7 +955,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
 
     if (upNextList && upNextList.length > 0) {
       const targetSong = upNextList[0];
-      
+
       // Pop the currently playing track from the queue so it doesn't replay or clutter
       if (currentTrack && currentTrack.id !== 'empty') {
         if (activeRoomCode && supabaseConnected) {
@@ -926,12 +964,12 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
           setQueueList(prev => prev.filter(song => song.id !== currentTrack.id));
         }
       }
-      
+
       selectTrack(targetSong.id);
     } else {
       if (isRepeat && queueList.length > 0) {
-        const targetSong = activeRoomCode 
-          ? [...queueList].sort((a,b) => b.votes - a.votes)[0] 
+        const targetSong = activeRoomCode
+          ? [...queueList].sort((a, b) => b.votes - a.votes)[0]
           : queueList[0];
         selectTrack(targetSong.id);
       } else {
@@ -1033,10 +1071,10 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       addToast('Permission Denied', 'Only the DJ can change tracks.', false);
       return;
     }
-    
+
     // Check if it's already in the queue
     const existing = queueList.find(q => q.title.toLowerCase() === song.title.toLowerCase());
-    
+
     if (existing) {
       selectTrack(existing.id);
     } else {
@@ -1056,9 +1094,9 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
         youtubeVideoId: song.youtubeVideoId,
         source: song.source
       };
-      
+
       setQueueList(prev => [...prev, newSong]);
-      
+
       if (activeRoomCode && supabaseConnected) {
         // Await the insert so we get the true database UUID for the track
         const dbItem = await supabaseAddSong(newSong);
@@ -1132,7 +1170,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
     if (currentTrack?.id === id) {
       nextTrack();
     }
-    
+
     if (activeRoomCode && supabaseConnected) {
       supabaseRemoveSong(id);
     } else {
@@ -1297,13 +1335,13 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
               if (!fn) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
 
               // Standard gesture → action mapping
-              if      (gestureName === 'Thumb_Up')    fn('swiperight');
-              else if (gestureName === 'Thumb_Down')  fn('swipeleft');
+              if (gestureName === 'Thumb_Up') fn('swiperight');
+              else if (gestureName === 'Thumb_Down') fn('swipeleft');
               else if (gestureName === 'Closed_Fist') fn('fist');
-              else if (gestureName === 'Open_Palm')   fn('palmup');
+              else if (gestureName === 'Open_Palm') fn('palmup');
               else if (gestureName === 'Pointing_Up') fn('palmdown');
               // Victory ✌️ — skip next track, just send 🎉 reaction
-              else if (gestureName === 'Victory')     sendReaction('🎉');
+              else if (gestureName === 'Victory') sendReaction('🎉');
               // ILoveYou 🤟 — volume up + ❤️ reaction (palmup already sends 👏 inside fn)
               else if (gestureName === 'ILoveYou') { fn('palmup'); sendReaction('❤️'); }
             }
@@ -1326,10 +1364,10 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
     initAudioEngine();
     const GESTURE_LABELS = {
       swiperight: '👍 Next Track',
-      swipeleft:  '👎 Prev Track',
-      fist:       '✊ Play/Pause',
-      palmup:     '🖐 Volume Up',
-      palmdown:   '☝ Volume Down',
+      swipeleft: '👎 Prev Track',
+      fist: '✊ Play/Pause',
+      palmup: '🖐 Volume Up',
+      palmdown: '☝ Volume Down',
     };
     addToast('Gesture', GESTURE_LABELS[type] || type.toUpperCase());
 
@@ -1338,7 +1376,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       sendReaction('👍'); // Thumb Up → next track + 👍
     }
     else if (type === 'swipeleft') { prevTrack(); }
-    else if (type === 'fist')      { togglePlayback(); }
+    else if (type === 'fist') { togglePlayback(); }
     else if (type === 'palmup') {
       setVolume(prev => {
         const next = Math.min(100, prev + 10);
@@ -1558,54 +1596,54 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
 
   return (
     <ClickSpark>
-    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden select-none bg-[#030307] text-[#e4e4e7] relative">
+      <div className="h-screen w-screen flex flex-col justify-between overflow-hidden select-none bg-[#030307] text-[#e4e4e7] relative">
 
-      {/* FLOATING EMOJI REACTIONS OVERLAY — pointer-events:none, never blocks interaction */}
-      <FloatingReactionContainer reactions={reactions} />
-      
-      {/* ENTER WORLD OVERLAY */}
-      {!hasEntered && (
-        <div 
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#030307] cursor-pointer group transition-opacity duration-1000"
-          onClick={() => {
-            setHasEntered(true);
-            // We NO LONGER auto-unmute here. We wait for explicit "Tap to Unmute" from HUD to bypass mobile autoplay restrictions.
-          }}
-        >
-          {/* Subtle Ambient Glow */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.15),transparent_50%)] pointer-events-none" />
+        {/* FLOATING EMOJI REACTIONS OVERLAY — pointer-events:none, never blocks interaction */}
+        <FloatingReactionContainer reactions={reactions} />
 
-          <div className="relative z-10 flex flex-col items-center">
-            {/* Interactive Play Button */}
-            <div className="relative w-32 h-32 mb-12 flex items-center justify-center">
-              {/* Ripple Rings */}
-              <div className="absolute inset-0 rounded-full border border-violet-500/30 scale-100 group-hover:scale-[1.5] group-hover:opacity-0 transition-all duration-1000 ease-out" />
-              <div className="absolute inset-4 rounded-full border border-fuchsia-500/30 scale-100 group-hover:scale-[1.3] group-hover:opacity-0 transition-all duration-700 ease-out delay-75" />
-              
-              {/* Solid Button */}
-              <div className="absolute inset-8 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-[0_0_60px_rgba(139,92,246,0.4)] group-hover:shadow-[0_0_100px_rgba(217,70,239,0.8)] group-hover:scale-110 transition-all duration-500 flex items-center justify-center">
-                <Play className="w-10 h-10 text-white ml-2 drop-shadow-lg" />
+        {/* ENTER WORLD OVERLAY */}
+        {!hasEntered && (
+          <div
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#030307] cursor-pointer group transition-opacity duration-1000"
+            onClick={() => {
+              setHasEntered(true);
+              // We NO LONGER auto-unmute here. We wait for explicit "Tap to Unmute" from HUD to bypass mobile autoplay restrictions.
+            }}
+          >
+            {/* Subtle Ambient Glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.15),transparent_50%)] pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-center">
+              {/* Interactive Play Button */}
+              <div className="relative w-32 h-32 mb-12 flex items-center justify-center">
+                {/* Ripple Rings */}
+                <div className="absolute inset-0 rounded-full border border-violet-500/30 scale-100 group-hover:scale-[1.5] group-hover:opacity-0 transition-all duration-1000 ease-out" />
+                <div className="absolute inset-4 rounded-full border border-fuchsia-500/30 scale-100 group-hover:scale-[1.3] group-hover:opacity-0 transition-all duration-700 ease-out delay-75" />
+
+                {/* Solid Button */}
+                <div className="absolute inset-8 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-[0_0_60px_rgba(139,92,246,0.4)] group-hover:shadow-[0_0_100px_rgba(217,70,239,0.8)] group-hover:scale-110 transition-all duration-500 flex items-center justify-center">
+                  <Play className="w-10 h-10 text-white ml-2 drop-shadow-lg" />
+                </div>
+              </div>
+
+              {/* Typography */}
+              <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl transition-all duration-700 group-hover:scale-105">
+                DJ ROOTS
+              </h1>
+              <div className="flex items-center gap-4 text-zinc-500 font-bold text-xs tracking-[0.3em] uppercase">
+                <div className="w-12 h-[1px] bg-gradient-to-r from-transparent to-zinc-600" />
+                <span className="group-hover:text-violet-400 transition-colors duration-500">Tap to start</span>
+                <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-zinc-600" />
               </div>
             </div>
-
-            {/* Typography */}
-            <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl transition-all duration-700 group-hover:scale-105">
-              DJ ROOTS
-            </h1>
-            <div className="flex items-center gap-4 text-zinc-500 font-bold text-xs tracking-[0.3em] uppercase">
-              <div className="w-12 h-[1px] bg-gradient-to-r from-transparent to-zinc-600" />
-              <span className="group-hover:text-violet-400 transition-colors duration-500">Tap to start</span>
-              <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-zinc-600" />
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* EXPLICIT STYLE INJECTIONS TO PREVENT UNSTYLED PREVIEWS */}
-      <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-      <style dangerouslySetInnerHTML={{
-        __html: `
+        {/* EXPLICIT STYLE INJECTIONS TO PREVENT UNSTYLED PREVIEWS */}
+        <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+        <style dangerouslySetInnerHTML={{
+          __html: `
         body {
           background-color: #030307 !important;
           color: #e4e4e7 !important;
@@ -1636,624 +1674,624 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
         }
       `}} />
 
-      {/* TOP HEADER */}
-      <header className="bg-zinc-950/70 backdrop-blur-md border-b border-zinc-900 px-6 py-3.5 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
-            <Radio className="w-4.5 h-4.5 text-white animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-extrabold tracking-wider text-white uppercase">DJ ROOTS</span>
-              <span className="bg-violet-500/10 text-violet-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-violet-500/20">V2.0 LIVE</span>
+        {/* TOP HEADER */}
+        <header className="bg-zinc-950/70 backdrop-blur-md border-b border-zinc-900 px-6 py-3.5 flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
+              <Radio className="w-4.5 h-4.5 text-white animate-pulse" />
             </div>
-            <p className="text-[10px] text-zinc-500">Crowd Vibes. You Control.</p>
-          </div>
-        </div>
-
-        {/* Room Stats — only shown when in a room */}
-        <div className="hidden md:flex items-center gap-5">
-          {activeRoomCode ? (
-            <>
-              <div className="flex flex-col">
-                <span className="text-[9px] text-zinc-500 font-semibold tracking-wider uppercase">ROOM CODE</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="hud-font text-emerald-400 text-xs font-bold tracking-widest">{activeRoomCode}</span>
-                  <button onClick={copyRoomCode} className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all">
-                    <Copy className="w-3 h-3" />
-                  </button>
-                </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-extrabold tracking-wider text-white uppercase">DJ ROOTS</span>
+                <span className="bg-violet-500/10 text-violet-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-violet-500/20">V2.0 LIVE</span>
               </div>
-              <div className="flex items-center gap-2 bg-zinc-900/40 px-3 py-1 rounded-xl border border-zinc-800/60">
-                <div className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </div>
-                <span className="hud-font text-zinc-300 text-xs font-semibold">{supabaseMembers.length} in Room</span>
-              </div>
-            </>
-          ) : (
-            <span className="text-[10px] text-zinc-600 font-semibold italic">No active room — Join or Create one</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors border border-zinc-800/50 hover:border-zinc-700 bg-zinc-900/30 px-2.5 py-1.5 rounded-lg"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
-          </button>
-
-          <div className="flex items-center gap-3 border-l border-zinc-800 pl-4">
-            <div className="flex flex-col text-right">
-              <div className="flex items-center gap-1 justify-end">
-                <span className="text-xs font-bold text-white">{userProfile?.name || authDisplayName}</span>
-                <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-              </div>
-              <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
+              <p className="text-[10px] text-zinc-500">Crowd Vibes. You Control.</p>
             </div>
-            <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
           </div>
-        </div>
-      </header>
 
-      {/* CORE WORKSPACE WRAPPER */}
-      <div className="flex-1 flex flex-row gap-4 p-4 min-h-0 w-full overflow-hidden">
-
-
-
-        {/* SLEEK LEFT SIDEBAR */}
-        <aside className="w-60 bg-zinc-950/40 backdrop-blur-xl border border-zinc-900/80 p-3.5 rounded-2xl flex flex-col flex-shrink-0 min-h-0 overflow-y-auto no-scrollbar">
-          <div className="flex flex-col min-h-full">
-            <div className="space-y-4 mb-4">
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-2">Navigation</span>
-
-              <nav className="flex flex-col gap-1">
-                <button onClick={showHomeView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'home' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <Home className={`w-4 h-4 ${activeView === 'home' ? 'text-violet-400' : ''}`} /> Home
-                </button>
-                <button onClick={() => { setActiveView('queue'); addToast('Queue', 'Navigating to song queue.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'queue' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <ListMusic className={`w-4 h-4 ${activeView === 'queue' ? 'text-violet-400' : ''}`} /> Queue
-                </button>
-                <button onClick={showAddSongView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'add-song' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <PlusCircle className={`w-4 h-4 ${activeView === 'add-song' ? 'text-violet-400' : ''}`} /> Add Song
-                </button>
-                {isHost && (
-                  <button onClick={showDjModeView} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                    <span className="flex items-center gap-3">
-                      <Activity className={`w-4 h-4 ${activeView === 'dj' ? 'text-violet-400' : ''}`} /> DJ Mode
-                    </span>
-                    <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
-                  </button>
-                )}
-                <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
-                </button>
-                <button disabled={!activeRoomCode} onClick={() => { setActiveView('chat'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'chat' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
-                  <span style={{fontSize:'1rem', lineHeight:1}}>💬</span>
-                  <span>Live Chat</span>
-                </button>
-
-              </nav>
-
-              {/* Thin Hype Mode Card */}
-              <div onClick={triggerHypeMode} className="bg-gradient-to-br from-indigo-950/20 to-violet-950/15 border border-violet-900/30 p-3.5 rounded-xl cursor-pointer hover:border-violet-500/40 transition-all group relative overflow-hidden">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-400">
-                      <Zap className="w-3.5 h-3.5 animate-pulse" />
-                    </div>
-                    <div>
-                      <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Hype Mode</h4>
-                      <p className="text-[9px] text-zinc-400">Raise hands to spark!</p>
-                    </div>
-                  </div>
-                  <div className={`w-7 h-3.5 rounded-full bg-zinc-800 relative transition-colors duration-300 ${hypeModeOn ? 'bg-violet-600' : ''}`}>
-                    <div className={`w-2.5 h-2.5 rounded-full bg-zinc-500 absolute top-0.5 transition-all ${hypeModeOn ? 'left-[14px] bg-white' : 'left-0.5'}`} />
+          {/* Room Stats — only shown when in a room */}
+          <div className="hidden md:flex items-center gap-5">
+            {activeRoomCode ? (
+              <>
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-zinc-500 font-semibold tracking-wider uppercase">ROOM CODE</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="hud-font text-emerald-400 text-xs font-bold tracking-widest">{activeRoomCode}</span>
+                    <button onClick={copyRoomCode} className="p-0.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all">
+                      <Copy className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
-              </div>
+                <div className="flex items-center gap-2 bg-zinc-900/40 px-3 py-1 rounded-xl border border-zinc-800/60">
+                  <div className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </div>
+                  <span className="hud-font text-zinc-300 text-xs font-semibold">{supabaseMembers.length} in Room</span>
+                </div>
+              </>
+            ) : (
+              <span className="text-[10px] text-zinc-600 font-semibold italic">No active room — Join or Create one</span>
+            )}
+          </div>
 
-              {/* Offline Connect Widget (Sidebar) */}
-              {!activeRoomCode && (
-                <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4">
-                  {!connectMode ? (
-                    <div className="space-y-2">
-                      <button onClick={() => setConnectMode('join')} className="w-full bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-500/20 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all">
-                        Join Room
-                      </button>
-                      <button onClick={() => setConnectMode('create')} className="w-full bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 py-2 rounded-lg text-zinc-300 text-[10px] font-bold uppercase tracking-wider transition-all">
-                        Create Room
-                      </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors border border-zinc-800/50 hover:border-zinc-700 bg-zinc-900/30 px-2.5 py-1.5 rounded-lg"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
+            </button>
+
+            <div className="flex items-center gap-3 border-l border-zinc-800 pl-4">
+              <div className="flex flex-col text-right">
+                <div className="flex items-center gap-1 justify-end">
+                  <span className="text-xs font-bold text-white">{userProfile?.name || authDisplayName}</span>
+                  <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                </div>
+                <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
+              </div>
+              <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
+            </div>
+          </div>
+        </header>
+
+        {/* CORE WORKSPACE WRAPPER */}
+        <div className="flex-1 flex flex-row gap-4 p-4 min-h-0 w-full overflow-hidden">
+
+
+
+          {/* SLEEK LEFT SIDEBAR */}
+          <aside className="w-60 bg-zinc-950/40 backdrop-blur-xl border border-zinc-900/80 p-3.5 rounded-2xl flex flex-col flex-shrink-0 min-h-0 overflow-y-auto no-scrollbar">
+            <div className="flex flex-col min-h-full">
+              <div className="space-y-4 mb-4">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider px-2">Navigation</span>
+
+                <nav className="flex flex-col gap-1">
+                  <button onClick={showHomeView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'home' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                    <Home className={`w-4 h-4 ${activeView === 'home' ? 'text-violet-400' : ''}`} /> Home
+                  </button>
+                  <button onClick={() => { setActiveView('queue'); addToast('Queue', 'Navigating to song queue.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'queue' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                    <ListMusic className={`w-4 h-4 ${activeView === 'queue' ? 'text-violet-400' : ''}`} /> Queue
+                  </button>
+                  <button onClick={showAddSongView} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'add-song' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                    <PlusCircle className={`w-4 h-4 ${activeView === 'add-song' ? 'text-violet-400' : ''}`} /> Add Song
+                  </button>
+                  {isHost && (
+                    <button onClick={showDjModeView} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                      <span className="flex items-center gap-3">
+                        <Activity className={`w-4 h-4 ${activeView === 'dj' ? 'text-violet-400' : ''}`} /> DJ Mode
+                      </span>
+                      <span className="bg-violet-500/20 text-violet-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">LIVE</span>
+                    </button>
+                  )}
+                  <button disabled={!activeRoomCode} onClick={() => { setActiveView('people'); addToast('People', 'Displaying current audience members.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'people' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                    <Users className={`w-4 h-4 ${activeView === 'people' ? 'text-violet-400' : ''}`} /> People
+                  </button>
+                  <button disabled={!activeRoomCode} onClick={() => { setActiveView('chat'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed ${activeView === 'chat' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>💬</span>
+                    <span>Live Chat</span>
+                  </button>
+
+                </nav>
+
+                {/* Thin Hype Mode Card */}
+                <div onClick={triggerHypeMode} className="bg-gradient-to-br from-indigo-950/20 to-violet-950/15 border border-violet-900/30 p-3.5 rounded-xl cursor-pointer hover:border-violet-500/40 transition-all group relative overflow-hidden">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-400">
+                        <Zap className="w-3.5 h-3.5 animate-pulse" />
+                      </div>
+                      <div>
+                        <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">Hype Mode</h4>
+                        <p className="text-[9px] text-zinc-400">Raise hands to spark!</p>
+                      </div>
                     </div>
-                  ) : (
-                    <form onSubmit={connectMode === 'create' ? executeCreateRoom : executeJoinRoom} className="flex flex-col gap-2">
-                      <input type="text" value={connectName} onChange={e => setConnectName(e.target.value)} placeholder="DJ Name" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full" />
-                      {connectMode === 'join' && (
-                        <input type="text" value={connectRoomCode} onChange={e => setConnectRoomCode(e.target.value.toUpperCase())} placeholder="Code" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full uppercase" />
-                      )}
-                      {connectMode === 'create' && (
-                        <label className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1 mb-1 cursor-pointer">
-                          <input type="checkbox" checked={connectIsPublic} onChange={e => setConnectIsPublic(e.target.checked)} className="rounded border-zinc-700 bg-[#08080f] text-violet-600 focus:ring-violet-500/30" />
-                          Make room public
-                        </label>
-                      )}
-                      {connectError && <div className="text-[9px] text-red-400">{connectError}</div>}
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setConnectMode(null)} className="flex-1 text-[9px] text-zinc-500 hover:text-white uppercase font-bold tracking-wider">Back</button>
-                        <button type="submit" disabled={connectLoading} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider disabled:opacity-50">
-                          {connectMode === 'join' ? 'Join' : 'Start'}
+                    <div className={`w-7 h-3.5 rounded-full bg-zinc-800 relative transition-colors duration-300 ${hypeModeOn ? 'bg-violet-600' : ''}`}>
+                      <div className={`w-2.5 h-2.5 rounded-full bg-zinc-500 absolute top-0.5 transition-all ${hypeModeOn ? 'left-[14px] bg-white' : 'left-0.5'}`} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Offline Connect Widget (Sidebar) */}
+                {!activeRoomCode && (
+                  <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4">
+                    {!connectMode ? (
+                      <div className="space-y-2">
+                        <button onClick={() => setConnectMode('join')} className="w-full bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-500/20 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all">
+                          Join Room
+                        </button>
+                        <button onClick={() => setConnectMode('create')} className="w-full bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 py-2 rounded-lg text-zinc-300 text-[10px] font-bold uppercase tracking-wider transition-all">
+                          Create Room
                         </button>
                       </div>
-                    </form>
-                  )}
-                </div>
-              )}
-
-              {/* Public Rooms List */}
-              {!activeRoomCode && (
-                <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4 space-y-3">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Live Public Rooms</span>
-                  {publicRooms.length > 0 ? (
-                    <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                      {publicRooms.map(r => (
-                        <div key={r.id} className="flex items-center justify-between bg-[#08080f] border border-zinc-800 p-2 rounded-lg group hover:border-violet-500/50 transition-colors">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <img src={r.host?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="DJ Avatar" className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-bold text-white truncate">{r.name}</p>
-                              <p className="text-[9px] text-zinc-500 truncate">{r.host?.name || 'DJ'} • {r.memberCount} members</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => {
-                              setConnectName(authDisplayName || '');
-                              setConnectRoomCode(r.code);
-                              setConnectMode('join');
-                            }} 
-                            className="bg-violet-600/20 hover:bg-violet-600 text-violet-300 hover:text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
-                          >
-                            Join
+                    ) : (
+                      <form onSubmit={connectMode === 'create' ? executeCreateRoom : executeJoinRoom} className="flex flex-col gap-2">
+                        <input type="text" value={connectName} onChange={e => setConnectName(e.target.value)} placeholder="DJ Name" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full" />
+                        {connectMode === 'join' && (
+                          <input type="text" value={connectRoomCode} onChange={e => setConnectRoomCode(e.target.value.toUpperCase())} placeholder="Code" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full uppercase" />
+                        )}
+                        {connectMode === 'create' && (
+                          <label className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1 mb-1 cursor-pointer">
+                            <input type="checkbox" checked={connectIsPublic} onChange={e => setConnectIsPublic(e.target.checked)} className="rounded border-zinc-700 bg-[#08080f] text-violet-600 focus:ring-violet-500/30" />
+                            Make room public
+                          </label>
+                        )}
+                        {connectError && <div className="text-[9px] text-red-400">{connectError}</div>}
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setConnectMode(null)} className="flex-1 text-[9px] text-zinc-500 hover:text-white uppercase font-bold tracking-wider">Back</button>
+                          <button type="submit" disabled={connectLoading} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider disabled:opacity-50">
+                            {connectMode === 'join' ? 'Join' : 'Start'}
                           </button>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 bg-[#08080f] border border-zinc-800 rounded-lg">
-                      <p className="text-[10px] text-zinc-500">No public rooms yet.</p>
-                      <p className="text-[9px] text-zinc-600 mt-1">Start a room to broadcast here!</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-auto space-y-3">
-              {/* Current DJ Summary - Only show if activeRoomCode exists */}
-              {activeRoomCode && (
-                <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
-                  <div className="flex items-center gap-2.5">
-                    <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
-                        <Crown className="w-3 h-3 text-amber-400" />
-                      </div>
-                    </div>
-                  </div>
-                  {isHost && (
-                    <div className="flex gap-1 mt-1">
-                      <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                        Change
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Leave Room - Only show if activeRoomCode exists */}
-              {activeRoomCode && (
-                <button
-                  onClick={handleLeaveRoom}
-                  className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                  Leave Room
-                </button>
-              )}
-            </div>
-          </div>
-        </aside >
-
-        {/* HomeSection is ALWAYS mounted so the <audio> element persists across navigation.
-             We toggle display:flex/none instead of unmounting to keep the music alive. */}
-        <div style={{
-          display: activeView === 'home' ? 'flex' : 'none',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden'
-        }}>
-          <HomeSection
-            currentTrack={currentTrack}
-            audioElapsedSeconds={audioElapsedSeconds}
-            formatTime={formatTime}
-            volume={volume}
-            adjustVolume={adjustVolume}
-            waveformBars={waveformBars}
-            isPlaying={isPlaying}
-            isMuted={isMuted}
-            isShuffle={isShuffle}
-            isRepeat={isRepeat}
-            toggleShuffle={toggleShuffle}
-            toggleRepeat={toggleRepeat}
-            prevTrack={prevTrack}
-            nextTrack={nextTrack}
-            togglePlayback={togglePlayback}
-            sortedAndFilteredQueue={sortedAndFilteredQueue}
-            searchFilterText={searchFilterText}
-            setSearchFilterText={setSearchFilterText}
-            selectTrack={selectTrack}
-            voteSong={voteSong}
-            queueList={queueList}
-            setShowAddModal={setShowAddModal}
-            copyRoomCode={copyRoomCode}
-            djTimerSeconds={djTimerSeconds}
-            setActiveView={setActiveView}
-            activeRoomCode={activeRoomCode}
-            onJoinRoom={handleJoinRoom}
-            authDisplayName={authDisplayName}
-            onTimeUpdate={(t) => setAudioElapsedSeconds(t)}
-            onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
-            onRegisterVolume={(fn) => { youtubeVolumeRef.current = fn; }}
-            isHost={isHost}
-            roomId={supabaseRoom?.id || null}
-            userProfile={userProfile}
-            canControlPlayback={canControlPlayback}
-            onAddSong={addSongFromPool}
-            onPlaySong={playSongFromPool}
-          />
-        </div>
-
-        {
-          activeView === 'add-song' ? (
-            <AddSongSection
-              activeAddTab={activeAddTab}
-              setActiveAddTab={setActiveAddTab}
-              searchFilterText={searchFilterText}
-              setSearchFilterText={setSearchFilterText}
-              filteredTrending={filteredTrending}
-              searchResults={searchResults}
-              isSearching={isSearching}
-              addSongFromPool={addSongFromPool}
-              playSongFromPool={playSongFromPool}
-              onSuggestSong={handleSuggestSong}
-              songLinkInput={songLinkInput}
-              setSongLinkInput={setSongLinkInput}
-              handleAddTrackByUrl={handleAddTrackByUrl}
-              isLoadingYutubeUrl={isLoadingYutubeUrl}
-              addToast={addToast}
-              currentTrack={currentTrack}
-              waveformBars={waveformBars}
-              isPlaying={isPlaying}
-              audioElapsedSeconds={audioElapsedSeconds}
-              formatTime={formatTime}
-              upNextList={upNextList}
-              skipUpvotes={skipUpvotes}
-              setSkipUpvotes={setSkipUpvotes}
-              skipDownvotes={skipDownvotes}
-              setSkipDownvotes={setSkipDownvotes}
-              skipThreshold={skipThreshold}
-              recentlyPlayed={recentlyPlayed}
-            />
-          ) : null
-        }
-
-        {
-          activeView === 'dj' ? (
-            <DJModeSection
-              interactiveScreenRef={interactiveScreenRef}
-              videoRef={videoRef}
-              webcamActive={webcamActive}
-              toggleWebcam={toggleWebcam}
-              simulateGesture={simulateGesture}
-              handleInteractiveMouseMove={handleInteractiveMouseMove}
-              handleInteractiveMouseDown={handleInteractiveMouseDown}
-              hypeModeOn={hypeModeOn}
-              spectrumHeights={spectrumHeights}
-              hasMovedMouse={hasMovedMouse}
-              mouseCoords={mouseCoords}
-              sortedAndFilteredQueue={sortedAndFilteredQueue}
-              currentTrack={currentTrack}
-              selectTrack={selectTrack}
-              voteSong={voteSong}
-              searchFilterText={searchFilterText}
-              setSearchFilterText={setSearchFilterText}
-              setActiveView={setActiveView}
-              queueList={queueList}
-              toggleShuffle={toggleShuffle}
-              activeRoomCode={activeRoomCode}
-            />
-          ) : null
-        }
-
-        {
-          activeView === 'queue' ? (
-            <QueueSection
-              sortedAndFilteredQueue={sortedAndFilteredQueue}
-              searchFilterText={searchFilterText}
-              setSearchFilterText={setSearchFilterText}
-              voteSong={voteSong}
-              queueList={queueList}
-              setQueueList={setQueueList}
-              currentTrack={currentTrack}
-              audioElapsedSeconds={audioElapsedSeconds}
-              formatTime={formatTime}
-              waveformBars={waveformBars}
-              isPlaying={isPlaying}
-              skipUpvotes={skipUpvotes}
-              skipDownvotes={skipDownvotes}
-              skipThreshold={skipThreshold}
-              setActiveView={setActiveView}
-              toggleShuffle={toggleShuffle}
-              activeRoomCode={activeRoomCode}
-              isHost={isHost}
-              selectTrack={selectTrack}
-              deleteTrack={deleteTrack}
-            />
-          ) : null
-        }
-
-        {
-          activeView === 'people' ? (
-            <PeopleSection
-              currentTrack={currentTrack}
-              audioElapsedSeconds={audioElapsedSeconds}
-              formatTime={formatTime}
-              waveformBars={waveformBars}
-              sortedAndFilteredQueue={sortedAndFilteredQueue}
-              setActiveView={setActiveView}
-              copyRoomCode={copyRoomCode}
-              addToast={addToast}
-              isPlaying={isPlaying}
-              roomCode={activeRoomCode}
-              members={supabaseMembers}
-              isHost={isHost}
-              onUpdateRole={handleRoleChange}
-            />
-          ) : null
-        }
-
-        {/* LiveChat is persistently mounted so the realtime subscription and scroll
-             position survive tab switches. We toggle visibility via display. */}
-        <div style={{
-          display: activeView === 'chat' ? 'flex' : 'none',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}>
-          <LiveChat
-            roomId={supabaseRoom?.id || null}
-            userProfile={userProfile}
-            canControlPlayback={canControlPlayback}
-            onAddSong={addSongFromPool}
-            onPlaySong={playSongFromPool}
-          />
-        </div>
-
-      </div >
-
-      {/* TIMELINE CONTROL FOOTER */}
-      < footer className="bg-zinc-950 border-t border-zinc-900 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-20" >
-        <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
-          <div className="relative group w-11 h-11 rounded-lg overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 shadow-md flex-shrink-0 flex items-center justify-center border border-violet-500/10">
-            {currentTrack.img ? (
-              <img src={currentTrack.img} alt="Cover" className="absolute inset-0 w-full h-full object-cover opacity-80" />
-            ) : null}
-            <div className="absolute inset-0 bg-black/30"></div>
-            <Music className="w-4.5 h-4.5 text-white animate-pulse relative z-10" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold text-white truncate max-w-[180px]">{currentTrack.title}</span>
-            <span className="text-[10px] text-zinc-500 truncate max-w-[180px]">{currentTrack.artist}</span>
-          </div>
-        </div>
-
-        {/* Center Timeline Playback sliders */}
-        <div className="flex flex-col items-center gap-2 w-full md:max-w-[450px]">
-          {canControlPlayback ? (
-            <div className="flex items-center gap-4.5">
-              <button onClick={toggleShuffle} className={`p-1 transition-all ${isShuffle ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
-                <Shuffle className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={prevTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
-                <SkipBack className="w-4 h-4" />
-              </button>
-              <button
-                onClick={togglePlayback}
-                className={`p-3 rounded-full transition-all active:scale-95 shadow-md flex items-center justify-center ${isPlaying ? 'bg-emerald-500 text-black shadow-emerald-500/10' : 'bg-violet-600 text-white shadow-violet-600/10'}`}
-              >
-                {isPlaying ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
-              </button>
-              <button onClick={nextTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
-                <SkipForward className="w-4 h-4" />
-              </button>
-              <button onClick={toggleRepeat} className={`p-1 transition-all ${isRepeat ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
-                <Repeat className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest bg-violet-500/10 px-4 py-2 rounded-full border border-violet-500/20">
-              <Activity className="w-4 h-4 animate-pulse" />
-              <span>Listening to DJ</span>
-            </div>
-          )}
-
-          {/* Custom Track progress bar */}
-          <div className="flex items-center gap-3 w-full text-[10px]">
-            <span className="hud-font text-zinc-500">{formatTime(audioElapsedSeconds)}</span>
-            <div
-              onClick={canControlPlayback ? seekTimeline : undefined}
-              className={`flex-1 h-1 bg-zinc-900 rounded-full ${canControlPlayback ? 'cursor-pointer' : 'cursor-default'} relative border border-zinc-800/40`}
-            >
-              <div
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-600 to-emerald-500 rounded-full"
-                style={{ width: `${(audioElapsedSeconds / currentTrack.duration) * 100}%` }}
-              />
-            </div>
-            <span className="hud-font text-zinc-500">{formatTime(currentTrack.duration)}</span>
-          </div>
-        </div>
-
-        {/* Volume Control + Reaction Bar */}
-        <div className="flex items-center gap-2 flex-1 justify-end min-w-0 pr-2 w-full">
-          {/* Emoji Reactions — compact toggle in the footer */}
-          <ReactionBar onSend={sendReaction} compact />
-
-          {isMuted && (
-            <button
-              onClick={() => setIsMuted(false)}
-              className="px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
-            >
-              Enter DJ
-            </button>
-          )}
-          <button
-             onClick={() => setIsMuted(!isMuted)}
-             className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
-             title={isMuted ? "Unmute" : "Mute"}
-          >
-             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={(e) => {
-              if (isMuted) setIsMuted(false);
-              adjustVolume(e.target.value);
-            }}
-            className="w-24 accent-violet-500"
-          />
-        </div>
-      </footer >
-
-      {/* CUSTOM ADD SONG MODAL */}
-      < div className={`fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-200 ${showAddModal ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="bg-zinc-950 border border-zinc-800 p-5 rounded-2xl w-full max-w-sm shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Add Custom DJ Track</h3>
-            <button onClick={() => setShowAddModal(false)} className="p-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition-all">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleAddTrackSubmit} className="space-y-3.5">
-            <div>
-              <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Track Title</label>
-              <input name="title" type="text" placeholder="e.g. Save Your Tears" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none placeholder-zinc-500" />
-            </div>
-            <div>
-              <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Artist Name</label>
-              <input name="artist" type="text" placeholder="e.g. The Weeknd" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none placeholder-zinc-500" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Duration (s)</label>
-                <input name="duration" type="number" min="30" max="600" defaultValue="180" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Pitch (Hz)</label>
-                <input name="pitch" type="number" min="100" max="800" defaultValue="260" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none" />
-              </div>
-            </div>
-
-            <button type="submit" className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs py-2 rounded-xl transition-all shadow-md">
-              Add to Queue List
-            </button>
-          </form>
-        </div>
-      </div >
-
-      {/* CHANGE DJ MODAL */}
-      {showChangeDJModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-zinc-950 border border-zinc-900 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative z-50">
-            <h3 className="text-white font-black uppercase tracking-wider mb-2">Change DJ</h3>
-            <p className="text-zinc-400 text-xs mb-4">Select a CO Host to take over as DJ.</p>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-              {(supabaseMembers || []).filter(m => m.role === 'CO Host' && m.profileId !== userProfile?.id && m.profileId !== userProfile?.profileId).map(member => {
-                const isThisMemberDJ = member.profileId === supabaseRoom?.host_id;
-                return (
-                  <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/40 hover:bg-zinc-900 border border-zinc-800 transition-all">
-                    <div className="flex items-center gap-3">
-                      <img src={member.avatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
-                      <div>
-                        <div className="text-xs font-bold text-white">{member.name}</div>
-                        <div className="text-[10px] text-zinc-500">{member.role}</div>
-                      </div>
-                    </div>
-                    {isThisMemberDJ ? (
-                      <button 
-                        onClick={() => {
-                          supabaseUpdateRoom({ host_id: userProfile?.profileId || userProfile?.id });
-                          addToast('DJ Removed', `${member.name} is no longer the DJ.`, true);
-                          setShowChangeDJModal(false);
-                        }}
-                        className="bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
-                      >
-                        Remove DJ
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => {
-                          supabaseUpdateRoom({ host_id: member.profileId });
-                          addToast('DJ Changed', `${member.name} is now the DJ.`, true);
-                          setShowChangeDJModal(false);
-                        }}
-                        className="bg-violet-600/20 text-violet-400 hover:bg-violet-600 hover:text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
-                      >
-                        Make DJ
-                      </button>
+                      </form>
                     )}
                   </div>
-                );
-              })}
-              {(supabaseMembers || []).filter(m => m.role === 'CO Host' && m.profileId !== userProfile?.id && m.profileId !== userProfile?.profileId).length === 0 && (
-                <div className="text-center text-zinc-500 text-xs py-4">No CO Hosts available. Assign a CO Host from the People list first.</div>
-              )}
-            </div>
-            <button onClick={() => setShowChangeDJModal(false)} className="mt-4 w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-bold rounded-xl transition-all">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+                )}
 
-      {/* TOAST SYSTEM ALERTS */}
-      < div className="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none" >
-        {
-          toasts.map(toast => (
-            <div
-              key={toast.id}
-              className={`flex items-center gap-3 bg-zinc-950 border p-3 rounded-xl shadow-xl max-w-xs pointer-events-auto transform transition-all duration-350 ${toast.isSuccess ? 'border-violet-500/30' : 'border-zinc-800'
-                }`}
-            >
-              <div className="p-1 rounded bg-violet-500/10 text-violet-400">
-                {toast.isSuccess ? <Info className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                {/* Public Rooms List */}
+                {!activeRoomCode && (
+                  <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4 space-y-3">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Live Public Rooms</span>
+                    {publicRooms.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                        {publicRooms.map(r => (
+                          <div key={r.id} className="flex items-center justify-between bg-[#08080f] border border-zinc-800 p-2 rounded-lg group hover:border-violet-500/50 transition-colors">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img src={r.host?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="DJ Avatar" className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-bold text-white truncate">{r.name}</p>
+                                <p className="text-[9px] text-zinc-500 truncate">{r.host?.name || 'DJ'} • {r.memberCount} members</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setConnectName(authDisplayName || '');
+                                setConnectRoomCode(r.code);
+                                setConnectMode('join');
+                              }}
+                              className="bg-violet-600/20 hover:bg-violet-600 text-violet-300 hover:text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                            >
+                              Join
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 bg-[#08080f] border border-zinc-800 rounded-lg">
+                        <p className="text-[10px] text-zinc-500">No public rooms yet.</p>
+                        <p className="text-[9px] text-zinc-600 mt-1">Start a room to broadcast here!</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-[10px] font-extrabold text-white uppercase tracking-wider">{toast.title}</h4>
-                <p className="text-[9px] text-zinc-400 truncate mt-0.5">{toast.desc}</p>
+
+              <div className="mt-auto space-y-3">
+                {/* Current DJ Summary - Only show if activeRoomCode exists */}
+                {activeRoomCode && (
+                  <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
+                    <div className="flex items-center gap-2.5">
+                      <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
+                          <Crown className="w-3 h-3 text-amber-400" />
+                        </div>
+                      </div>
+                    </div>
+                    {isHost && (
+                      <div className="flex gap-1 mt-1">
+                        <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                          Change
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Leave Room - Only show if activeRoomCode exists */}
+                {activeRoomCode && (
+                  <button
+                    onClick={handleLeaveRoom}
+                    className="w-full bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                    Leave Room
+                  </button>
+                )}
               </div>
             </div>
-          ))
-        }
+          </aside >
+
+          {/* HomeSection is ALWAYS mounted so the <audio> element persists across navigation.
+             We toggle display:flex/none instead of unmounting to keep the music alive. */}
+          <div style={{
+            display: activeView === 'home' ? 'flex' : 'none',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden'
+          }}>
+            <HomeSection
+              currentTrack={currentTrack}
+              audioElapsedSeconds={audioElapsedSeconds}
+              formatTime={formatTime}
+              volume={volume}
+              adjustVolume={adjustVolume}
+              waveformBars={waveformBars}
+              isPlaying={isPlaying}
+              isMuted={isMuted}
+              isShuffle={isShuffle}
+              isRepeat={isRepeat}
+              toggleShuffle={toggleShuffle}
+              toggleRepeat={toggleRepeat}
+              prevTrack={prevTrack}
+              nextTrack={nextTrack}
+              togglePlayback={togglePlayback}
+              sortedAndFilteredQueue={sortedAndFilteredQueue}
+              searchFilterText={searchFilterText}
+              setSearchFilterText={setSearchFilterText}
+              selectTrack={selectTrack}
+              voteSong={voteSong}
+              queueList={queueList}
+              setShowAddModal={setShowAddModal}
+              copyRoomCode={copyRoomCode}
+              djTimerSeconds={djTimerSeconds}
+              setActiveView={setActiveView}
+              activeRoomCode={activeRoomCode}
+              onJoinRoom={handleJoinRoom}
+              authDisplayName={authDisplayName}
+              onTimeUpdate={(t) => setAudioElapsedSeconds(t)}
+              onRegisterSeek={(fn) => { youtubeSeekRef.current = fn; }}
+              onRegisterVolume={(fn) => { youtubeVolumeRef.current = fn; }}
+              isHost={isHost}
+              roomId={supabaseRoom?.id || null}
+              userProfile={userProfile}
+              canControlPlayback={canControlPlayback}
+              onAddSong={addSongFromPool}
+              onPlaySong={playSongFromPool}
+            />
+          </div>
+
+          {
+            activeView === 'add-song' ? (
+              <AddSongSection
+                activeAddTab={activeAddTab}
+                setActiveAddTab={setActiveAddTab}
+                searchFilterText={searchFilterText}
+                setSearchFilterText={setSearchFilterText}
+                filteredTrending={filteredTrending}
+                searchResults={searchResults}
+                isSearching={isSearching}
+                addSongFromPool={addSongFromPool}
+                playSongFromPool={playSongFromPool}
+                onSuggestSong={handleSuggestSong}
+                songLinkInput={songLinkInput}
+                setSongLinkInput={setSongLinkInput}
+                handleAddTrackByUrl={handleAddTrackByUrl}
+                isLoadingYutubeUrl={isLoadingYutubeUrl}
+                addToast={addToast}
+                currentTrack={currentTrack}
+                waveformBars={waveformBars}
+                isPlaying={isPlaying}
+                audioElapsedSeconds={audioElapsedSeconds}
+                formatTime={formatTime}
+                upNextList={upNextList}
+                skipUpvotes={skipUpvotes}
+                setSkipUpvotes={setSkipUpvotes}
+                skipDownvotes={skipDownvotes}
+                setSkipDownvotes={setSkipDownvotes}
+                skipThreshold={skipThreshold}
+                recentlyPlayed={recentlyPlayed}
+              />
+            ) : null
+          }
+
+          {
+            activeView === 'dj' ? (
+              <DJModeSection
+                interactiveScreenRef={interactiveScreenRef}
+                videoRef={videoRef}
+                webcamActive={webcamActive}
+                toggleWebcam={toggleWebcam}
+                simulateGesture={simulateGesture}
+                handleInteractiveMouseMove={handleInteractiveMouseMove}
+                handleInteractiveMouseDown={handleInteractiveMouseDown}
+                hypeModeOn={hypeModeOn}
+                spectrumHeights={spectrumHeights}
+                hasMovedMouse={hasMovedMouse}
+                mouseCoords={mouseCoords}
+                sortedAndFilteredQueue={sortedAndFilteredQueue}
+                currentTrack={currentTrack}
+                selectTrack={selectTrack}
+                voteSong={voteSong}
+                searchFilterText={searchFilterText}
+                setSearchFilterText={setSearchFilterText}
+                setActiveView={setActiveView}
+                queueList={queueList}
+                toggleShuffle={toggleShuffle}
+                activeRoomCode={activeRoomCode}
+              />
+            ) : null
+          }
+
+          {
+            activeView === 'queue' ? (
+              <QueueSection
+                sortedAndFilteredQueue={sortedAndFilteredQueue}
+                searchFilterText={searchFilterText}
+                setSearchFilterText={setSearchFilterText}
+                voteSong={voteSong}
+                queueList={queueList}
+                setQueueList={setQueueList}
+                currentTrack={currentTrack}
+                audioElapsedSeconds={audioElapsedSeconds}
+                formatTime={formatTime}
+                waveformBars={waveformBars}
+                isPlaying={isPlaying}
+                skipUpvotes={skipUpvotes}
+                skipDownvotes={skipDownvotes}
+                skipThreshold={skipThreshold}
+                setActiveView={setActiveView}
+                toggleShuffle={toggleShuffle}
+                activeRoomCode={activeRoomCode}
+                isHost={isHost}
+                selectTrack={selectTrack}
+                deleteTrack={deleteTrack}
+              />
+            ) : null
+          }
+
+          {
+            activeView === 'people' ? (
+              <PeopleSection
+                currentTrack={currentTrack}
+                audioElapsedSeconds={audioElapsedSeconds}
+                formatTime={formatTime}
+                waveformBars={waveformBars}
+                sortedAndFilteredQueue={sortedAndFilteredQueue}
+                setActiveView={setActiveView}
+                copyRoomCode={copyRoomCode}
+                addToast={addToast}
+                isPlaying={isPlaying}
+                roomCode={activeRoomCode}
+                members={supabaseMembers}
+                isHost={isHost}
+                onUpdateRole={handleRoleChange}
+              />
+            ) : null
+          }
+
+          {/* LiveChat is persistently mounted so the realtime subscription and scroll
+             position survive tab switches. We toggle visibility via display. */}
+          <div style={{
+            display: activeView === 'chat' ? 'flex' : 'none',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}>
+            <LiveChat
+              roomId={supabaseRoom?.id || null}
+              userProfile={userProfile}
+              canControlPlayback={canControlPlayback}
+              onAddSong={addSongFromPool}
+              onPlaySong={playSongFromPool}
+            />
+          </div>
+
+        </div >
+
+        {/* TIMELINE CONTROL FOOTER */}
+        < footer className="bg-zinc-950 border-t border-zinc-900 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 z-20" >
+          <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
+            <div className="relative group w-11 h-11 rounded-lg overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 shadow-md flex-shrink-0 flex items-center justify-center border border-violet-500/10">
+              {currentTrack.img ? (
+                <img src={currentTrack.img} alt="Cover" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+              ) : null}
+              <div className="absolute inset-0 bg-black/30"></div>
+              <Music className="w-4.5 h-4.5 text-white animate-pulse relative z-10" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-white truncate max-w-[180px]">{currentTrack.title}</span>
+              <span className="text-[10px] text-zinc-500 truncate max-w-[180px]">{currentTrack.artist}</span>
+            </div>
+          </div>
+
+          {/* Center Timeline Playback sliders */}
+          <div className="flex flex-col items-center gap-2 w-full md:max-w-[450px]">
+            {canControlPlayback ? (
+              <div className="flex items-center gap-4.5">
+                <button onClick={toggleShuffle} className={`p-1 transition-all ${isShuffle ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
+                  <Shuffle className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={prevTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
+                  <SkipBack className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={togglePlayback}
+                  className={`p-3 rounded-full transition-all active:scale-95 shadow-md flex items-center justify-center ${isPlaying ? 'bg-emerald-500 text-black shadow-emerald-500/10' : 'bg-violet-600 text-white shadow-violet-600/10'}`}
+                >
+                  {isPlaying ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
+                </button>
+                <button onClick={nextTrack} className="p-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 rounded-lg text-zinc-300 hover:text-white transition-all">
+                  <SkipForward className="w-4 h-4" />
+                </button>
+                <button onClick={toggleRepeat} className={`p-1 transition-all ${isRepeat ? 'text-violet-400' : 'text-zinc-500 hover:text-white'}`}>
+                  <Repeat className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest bg-violet-500/10 px-4 py-2 rounded-full border border-violet-500/20">
+                <Activity className="w-4 h-4 animate-pulse" />
+                <span>Listening to DJ</span>
+              </div>
+            )}
+
+            {/* Custom Track progress bar */}
+            <div className="flex items-center gap-3 w-full text-[10px]">
+              <span className="hud-font text-zinc-500">{formatTime(audioElapsedSeconds)}</span>
+              <div
+                onClick={canControlPlayback ? seekTimeline : undefined}
+                className={`flex-1 h-1 bg-zinc-900 rounded-full ${canControlPlayback ? 'cursor-pointer' : 'cursor-default'} relative border border-zinc-800/40`}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-600 to-emerald-500 rounded-full"
+                  style={{ width: `${(audioElapsedSeconds / currentTrack.duration) * 100}%` }}
+                />
+              </div>
+              <span className="hud-font text-zinc-500">{formatTime(currentTrack.duration)}</span>
+            </div>
+          </div>
+
+          {/* Volume Control + Reaction Bar */}
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0 pr-2 w-full">
+            {/* Emoji Reactions — compact toggle in the footer */}
+            <ReactionBar onSend={sendReaction} compact />
+
+            {isMuted && (
+              <button
+                onClick={() => setIsMuted(false)}
+                className="px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+              >
+                Enter DJ
+              </button>
+            )}
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={(e) => {
+                if (isMuted) setIsMuted(false);
+                adjustVolume(e.target.value);
+              }}
+              className="w-24 accent-violet-500"
+            />
+          </div>
+        </footer >
+
+        {/* CUSTOM ADD SONG MODAL */}
+        < div className={`fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-200 ${showAddModal ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+          <div className="bg-zinc-950 border border-zinc-800 p-5 rounded-2xl w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Add Custom DJ Track</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-1 rounded bg-zinc-900 text-zinc-400 hover:text-white transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddTrackSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Track Title</label>
+                <input name="title" type="text" placeholder="e.g. Save Your Tears" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none placeholder-zinc-500" />
+              </div>
+              <div>
+                <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Artist Name</label>
+                <input name="artist" type="text" placeholder="e.g. The Weeknd" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none placeholder-zinc-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Duration (s)</label>
+                  <input name="duration" type="number" min="30" max="600" defaultValue="180" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-[9px] text-zinc-400 uppercase font-bold tracking-wider mb-1">Pitch (Hz)</label>
+                  <input name="pitch" type="number" min="100" max="800" defaultValue="260" required className="w-full bg-zinc-900 border border-zinc-850 focus:border-violet-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none" />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs py-2 rounded-xl transition-all shadow-md">
+                Add to Queue List
+              </button>
+            </form>
+          </div>
+        </div >
+
+        {/* CHANGE DJ MODAL */}
+        {showChangeDJModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-zinc-950 border border-zinc-900 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative z-50">
+              <h3 className="text-white font-black uppercase tracking-wider mb-2">Change DJ</h3>
+              <p className="text-zinc-400 text-xs mb-4">Select a CO Host to take over as DJ.</p>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                {(supabaseMembers || []).filter(m => m.role === 'CO Host' && m.profileId !== userProfile?.id && m.profileId !== userProfile?.profileId).map(member => {
+                  const isThisMemberDJ = member.profileId === supabaseRoom?.host_id;
+                  return (
+                    <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/40 hover:bg-zinc-900 border border-zinc-800 transition-all">
+                      <div className="flex items-center gap-3">
+                        <img src={member.avatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                        <div>
+                          <div className="text-xs font-bold text-white">{member.name}</div>
+                          <div className="text-[10px] text-zinc-500">{member.role}</div>
+                        </div>
+                      </div>
+                      {isThisMemberDJ ? (
+                        <button
+                          onClick={() => {
+                            supabaseUpdateRoom({ host_id: userProfile?.profileId || userProfile?.id });
+                            addToast('DJ Removed', `${member.name} is no longer the DJ.`, true);
+                            setShowChangeDJModal(false);
+                          }}
+                          className="bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                        >
+                          Remove DJ
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            supabaseUpdateRoom({ host_id: member.profileId });
+                            addToast('DJ Changed', `${member.name} is now the DJ.`, true);
+                            setShowChangeDJModal(false);
+                          }}
+                          className="bg-violet-600/20 text-violet-400 hover:bg-violet-600 hover:text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                        >
+                          Make DJ
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {(supabaseMembers || []).filter(m => m.role === 'CO Host' && m.profileId !== userProfile?.id && m.profileId !== userProfile?.profileId).length === 0 && (
+                  <div className="text-center text-zinc-500 text-xs py-4">No CO Hosts available. Assign a CO Host from the People list first.</div>
+                )}
+              </div>
+              <button onClick={() => setShowChangeDJModal(false)} className="mt-4 w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-bold rounded-xl transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TOAST SYSTEM ALERTS */}
+        < div className="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none" >
+          {
+            toasts.map(toast => (
+              <div
+                key={toast.id}
+                className={`flex items-center gap-3 bg-zinc-950 border p-3 rounded-xl shadow-xl max-w-xs pointer-events-auto transform transition-all duration-350 ${toast.isSuccess ? 'border-violet-500/30' : 'border-zinc-800'
+                  }`}
+              >
+                <div className="p-1 rounded bg-violet-500/10 text-violet-400">
+                  {toast.isSuccess ? <Info className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[10px] font-extrabold text-white uppercase tracking-wider">{toast.title}</h4>
+                  <p className="text-[9px] text-zinc-400 truncate mt-0.5">{toast.desc}</p>
+                </div>
+              </div>
+            ))
+          }
+        </div >
       </div >
-    </div >
     </ClickSpark>
   );
 }
