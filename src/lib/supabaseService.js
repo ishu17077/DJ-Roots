@@ -37,7 +37,7 @@ function generateRoomCode() {
 }
 
 /** Create a new room and join as host. Returns { room, profile } */
-export async function createRoom(hostName) {
+export async function createRoom(hostName, isPublic = true) {
   // 1. Get or create the host profile
   const profile = await getOrCreateProfile(hostName);
   if (!profile) return null;
@@ -64,6 +64,7 @@ export async function createRoom(hostName) {
       name: `${hostName}'s Room`,
       host_id: profile.id,
       dj_timer_seconds: 300,
+      is_public: isPublic,
     })
     .select()
     .single();
@@ -80,6 +81,26 @@ export async function createRoom(hostName) {
 
 /** Find existing profile by auth_id or name, or create a new one */
 export async function getOrCreateProfile(name, authId = null) {
+  let authUser = null;
+  
+  if (!authId) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      authUser = session.user;
+      authId = session.user.id;
+    }
+  } else {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id === authId) {
+      authUser = session.user;
+    }
+  }
+
+  let userAvatar = null;
+  if (authUser?.user_metadata) {
+    userAvatar = authUser.user_metadata.avatar_url || authUser.user_metadata.picture;
+  }
+
   // First try to find by auth_id (Supabase Auth linked profile)
   if (authId) {
     const { data: authLinked } = await supabase
@@ -87,7 +108,20 @@ export async function getOrCreateProfile(name, authId = null) {
       .select('*')
       .eq('auth_id', authId)
       .maybeSingle();
-    if (authLinked) return authLinked;
+      
+    if (authLinked) {
+      // Sync Google avatar if current is different
+      if (userAvatar && authLinked.avatar_url !== userAvatar) {
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .update({ avatar_url: userAvatar })
+          .eq('id', authLinked.id)
+          .select()
+          .single();
+        if (updatedProfile) return updatedProfile;
+      }
+      return authLinked;
+    }
   }
 
   const username = `@${name.toLowerCase().replace(/\s+/g, '_')}_${Math.floor(Math.random() * 1000)}`;
@@ -99,7 +133,28 @@ export async function getOrCreateProfile(name, authId = null) {
     .eq('name', name)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) {
+    if (userAvatar && existing.avatar_url !== userAvatar) {
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .update({ avatar_url: userAvatar, auth_id: authId || existing.auth_id })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        if (updatedProfile) return updatedProfile;
+    }
+    
+    if (authId && !existing.auth_id) {
+        const { data: linkedProfile } = await supabase
+          .from('profiles')
+          .update({ auth_id: authId })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        if (linkedProfile) return linkedProfile;
+    }
+    return existing;
+  }
 
   // Create a new profile
   const avatars = [
@@ -112,7 +167,7 @@ export async function getOrCreateProfile(name, authId = null) {
   ];
   const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
 
-  const insertData = { name, username, avatar_url: randomAvatar };
+  const insertData = { name, username, avatar_url: userAvatar || randomAvatar };
   if (authId) insertData.auth_id = authId;
 
   const { data: newProfile, error } = await supabase
@@ -142,6 +197,36 @@ export async function joinRoomByCode(code, userName) {
   await joinRoom(room.id, profile.id, 'member');
 
   return { room, profile };
+}
+
+/** Fetch public rooms ordered by member count */
+export async function fetchPublicRooms() {
+  const { data, error } = await supabase
+    .from('rooms')
+    .select(`
+      *,
+      members:room_members(id, role, profile:profiles(name, avatar_url))
+    `)
+    .eq('is_public', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('fetchPublicRooms error:', error);
+    return [];
+  }
+  
+  // Sort by member count descending and extract host
+  const roomsWithCount = data.map(room => {
+    // Try to find the host from members
+    const hostMember = (room.members || []).find(m => m.role && m.role.toLowerCase() === 'host');
+    return {
+      ...room,
+      host: hostMember?.profile || { name: 'DJ', avatar_url: null },
+      memberCount: room.members ? room.members.length : 0
+    };
+  }).sort((a, b) => b.memberCount - a.memberCount);
+  
+  return roomsWithCount;
 }
 
 // ======================== QUEUE ========================

@@ -239,7 +239,7 @@ export const extractArtistFromTitle = (title) => {
  * @param {string} addedBy - User who added the song
  * @returns {Promise<Object>} - Complete song object for queue
  */
-export const createSongFromYouTube = async (videoId, addedBy = 'Guest') => {
+export const createSongFromYouTube = async (videoId, addedBy = 'Guest', userAvatar = null) => {
   const metadata = await fetchVideoMetadata(videoId);
   if (metadata.embeddable === false) {
     throw new Error('This YouTube video cannot be embedded.');
@@ -260,7 +260,7 @@ export const createSongFromYouTube = async (videoId, addedBy = 'Guest') => {
     youtubeVideoId: videoId,
     embedUrl: buildEmbedUrl(videoId),
     source: 'youtube',
-    userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
+    userAvatar: userAvatar || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
   };
 };
 

@@ -30,6 +30,7 @@ DECLARE
     'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80'
   ];
   random_avatar TEXT;
+  user_avatar TEXT;
 BEGIN
   -- Extract display name from user metadata or email
   user_name := COALESCE(
@@ -38,6 +39,11 @@ BEGIN
   );
   user_username := '@' || lower(replace(user_name, ' ', '_')) || '_' || floor(random() * 1000)::text;
   random_avatar := avatar_urls[1 + floor(random() * array_length(avatar_urls, 1))::int];
+  user_avatar := COALESCE(
+    NEW.raw_user_meta_data ->> 'avatar_url',
+    NEW.raw_user_meta_data ->> 'picture',
+    random_avatar
+  );
 
   INSERT INTO public.profiles (id, auth_id, name, username, email, avatar_url)
   VALUES (
@@ -46,7 +52,7 @@ BEGIN
     user_name,
     user_username,
     NEW.email,
-    random_avatar
+    user_avatar
   )
   ON CONFLICT (auth_id) DO UPDATE SET
     email = EXCLUDED.email;
