@@ -380,3 +380,55 @@ export const searchYouTube = async (query) => {
   
   return [];
 };
+
+/**
+ * Fetch top trending music videos from YouTube API directly
+ * Uses chart=mostPopular and videoCategoryId=10 (Music)
+ */
+export const getTrendingMusic = async () => {
+  if (!YOUTUBE_API_KEY) return [];
+  
+  try {
+    const params = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      chart: 'mostPopular',
+      videoCategoryId: '10', // 10 is Music
+      maxResults: '20',
+      key: YOUTUBE_API_KEY,
+    });
+    const response = await fetch(`${YOUTUBE_VIDEOS_URL}?${params.toString()}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.items.map(item => {
+        // Parse ISO 8601 duration
+        let durationSecs = 180;
+        if (item.contentDetails && item.contentDetails.duration) {
+          const match = item.contentDetails.duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+          if (match) {
+            const h = (parseInt(match[1]) || 0);
+            const m = (parseInt(match[2]) || 0);
+            const s = (parseInt(match[3]) || 0);
+            durationSecs = h * 3600 + m * 60 + s;
+          }
+        }
+        
+        return {
+          id: `youtube-${item.id}`,
+          title: item.snippet.title,
+          artist: item.snippet.channelTitle || extractArtistFromTitle(item.snippet.title),
+          duration: durationSecs,
+          img: item.snippet.thumbnails?.high?.url || getThumbnailUrl(item.id),
+          youtubeVideoId: item.id,
+          source: 'youtube',
+          pitch: 260,
+          bpm: 120,
+          key: 'G Min',
+          votes: 1
+        };
+      });
+    }
+  } catch (e) {
+    console.warn('YouTube API v3 getTrendingMusic failed:', e);
+  }
+  return [];
+};
