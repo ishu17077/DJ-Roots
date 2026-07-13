@@ -1574,7 +1574,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
 
         // Spike spectrum bars occasionally
         setSpectrumHeights(prev => prev.map(h => Math.random() < 0.3 ? 32 : h));
-      }, 500);
+      }, 2000);
     } else {
       if (sequencerIntervalRef.current) {
         clearInterval(sequencerIntervalRef.current);
@@ -1594,7 +1594,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       setSpectrumHeights(prev =>
         prev.map(() => isPlaying ? Math.floor(Math.random() * 28) + 4 : 4)
       );
-    }, 120);
+    }, 1200);
 
     return () => clearInterval(interval);
   }, [isPlaying]);
@@ -1605,7 +1605,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       setWaveformBars(prev =>
         prev.map(() => isPlaying ? Math.floor(Math.random() * 26) + 6 : Math.floor(Math.random() * 4) + 2)
       );
-    }, isPlaying ? 180 : 400);
+    }, isPlaying ? 1500 : 3000);
 
     return () => clearInterval(interval);
   }, [isPlaying]);
@@ -1627,7 +1627,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
         videoRef.current.play().catch(() => { });
       }
     }
-  });
+  }, [webcamActive]);
 
   // Format Helper: Seconds to MM:SS
   const formatTime = (secs) => {
