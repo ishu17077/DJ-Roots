@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import LiveChat from './LiveChat.jsx';
+import ReactionBar from './ReactionBar.jsx';
 import {
   ChevronDown,
   ChevronUp,
@@ -31,7 +34,15 @@ export default function DJModeSection({
   queueList,
   toggleShuffle,
   activeRoomCode,
+  roomId,
+  userProfile,
+  canControlPlayback,
+  onAddSong,
+  onPlaySong,
+  sendReaction,
 }) {
+  const [activeTab, setActiveTab] = useState('queue');
+
   return (
     <>
       <main className="flex-1 bg-zinc-950/20 backdrop-blur-xl border border-zinc-900/80 rounded-2xl overflow-hidden flex flex-col min-h-0 relative">
@@ -116,6 +127,10 @@ export default function DJModeSection({
             ))}
           </div>
 
+          <div className="absolute top-4 right-4 z-30 pointer-events-auto">
+            <ReactionBar onSend={sendReaction} compact={false} />
+          </div>
+
         </div>
 
         <div className="px-4 py-2 bg-zinc-950 border-t border-zinc-900 flex justify-between items-center text-[10px] text-zinc-500">
@@ -127,70 +142,96 @@ export default function DJModeSection({
       </main>
 
       <aside className="w-80 bg-zinc-950/40 backdrop-blur-xl border border-zinc-900/80 rounded-2xl flex flex-col min-h-0 flex-shrink-0 overflow-hidden">
-        <div className="p-4 border-b border-zinc-900/80 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Playlist Deck</span>
-            <h3 className="text-xs font-extrabold text-white mt-0.5">Song Queue</h3>
-          </div>
-          <button onClick={() => setActiveView('add-song')} className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all">
-            <Plus className="w-3.5 h-3.5" /> Add Song
+        <div className="flex items-center border-b border-zinc-900/80">
+          <button 
+            onClick={() => setActiveTab('queue')}
+            className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-widest transition-colors ${activeTab === 'queue' ? 'text-violet-400 bg-violet-500/10 border-b-2 border-violet-500' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+          >
+            Queue
+          </button>
+          <button 
+            onClick={() => setActiveTab('chat')}
+            className={`flex-1 py-3 text-[10px] font-extrabold uppercase tracking-widest transition-colors ${activeTab === 'chat' ? 'text-violet-400 bg-violet-500/10 border-b-2 border-violet-500' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+          >
+            Live Chat
           </button>
         </div>
 
-        <div className="p-3 border-b border-zinc-900/40 bg-zinc-950/20">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search playlist tracks..."
-              value={searchFilterText}
-              onChange={e => setSearchFilterText(e.target.value)}
-              className="w-full bg-zinc-900/60 border border-zinc-800/80 focus:border-violet-500 rounded-lg pl-8 pr-3 py-1.5 text-[11px] text-white focus:outline-none placeholder-zinc-500"
-            />
-          </div>
-        </div>
+        {activeTab === 'queue' ? (
+          <>
+            <div className="p-3 border-b border-zinc-900/80 flex items-center justify-between bg-zinc-950/20">
+              <span className="text-xs font-extrabold text-white">Song Queue</span>
+              <button onClick={() => setActiveView('add-song')} className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+                <Plus className="w-3.5 h-3.5" /> Add Song
+              </button>
+            </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
-          {sortedAndFilteredQueue.map((song) => (
-            <div
-              key={song.id}
-              onClick={() => selectTrack(song.id)}
-              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${song.id === currentTrack.id ? 'bg-gradient-to-r from-violet-950/30 to-zinc-900/40 border-violet-500/20 shadow' : 'bg-zinc-900/20 border-transparent hover:border-zinc-850 hover:bg-zinc-900/40'}`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <img src={song.img} alt="Art" className="w-8 h-8 rounded-md object-cover" />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-bold text-white truncate">{song.title}</span>
-                  <span className="text-[9px] text-zinc-500 truncate">{song.artist}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {activeRoomCode && (
-                  <>
-                    <span className={`hud-font text-[9px] font-bold ${song.votes >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {song.votes >= 0 ? '+' : ''}{song.votes}
-                    </span>
-                    <div className="flex flex-col gap-0.5">
-                      <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, 1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-emerald-400 transition-colors">
-                        <ChevronUp className="w-3 h-3" />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, -1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-red-400 transition-colors">
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </>
-                )}
+            <div className="p-3 border-b border-zinc-900/40 bg-zinc-950/20">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search playlist tracks..."
+                  value={searchFilterText}
+                  onChange={e => setSearchFilterText(e.target.value)}
+                  className="w-full bg-zinc-900/60 border border-zinc-800/80 focus:border-violet-500 rounded-lg pl-8 pr-3 py-1.5 text-[11px] text-white focus:outline-none placeholder-zinc-500"
+                />
               </div>
             </div>
-          ))}
-        </div>
 
-        <div className="p-3 bg-zinc-950 border-t border-zinc-900 flex justify-between items-center text-[10px] text-zinc-500">
-          <span>Total Queued: <b className="text-white">{queueList.length}</b></span>
-          <span onClick={toggleShuffle} className="cursor-pointer hover:text-white transition-all flex items-center gap-1">
-            <Shuffle className="w-3 h-3 text-violet-400" /> Auto-Vibe Sort
-          </span>
-        </div>
+            <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
+              {sortedAndFilteredQueue.map((song) => (
+                <div
+                  key={song.id}
+                  onClick={() => selectTrack(song.id)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${song.id === currentTrack.id ? 'bg-gradient-to-r from-violet-950/30 to-zinc-900/40 border-violet-500/20 shadow' : 'bg-zinc-900/20 border-transparent hover:border-zinc-850 hover:bg-zinc-900/40'}`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img src={song.img} alt="Art" className="w-8 h-8 rounded-md object-cover" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[11px] font-bold text-white truncate">{song.title}</span>
+                      <span className="text-[9px] text-zinc-500 truncate">{song.artist}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {activeRoomCode && (
+                      <>
+                        <span className={`hud-font text-[9px] font-bold ${song.votes >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {song.votes >= 0 ? '+' : ''}{song.votes}
+                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, 1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-emerald-400 transition-colors">
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); voteSong(song.id, -1); }} className="p-0.5 rounded hover:bg-zinc-850 text-zinc-500 hover:text-red-400 transition-colors">
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 bg-zinc-950 border-t border-zinc-900 flex justify-between items-center text-[10px] text-zinc-500">
+              <span>Total Queued: <b className="text-white">{queueList.length}</b></span>
+              <span onClick={toggleShuffle} className="cursor-pointer hover:text-white transition-all flex items-center gap-1">
+                <Shuffle className="w-3 h-3 text-violet-400" /> Auto-Vibe Sort
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col min-h-0">
+            <LiveChat
+              roomId={roomId}
+              userProfile={userProfile}
+              canControlPlayback={canControlPlayback}
+              onAddSong={onAddSong}
+              onPlaySong={onPlaySong}
+            />
+          </div>
+        )}
       </aside>
     </>
   );

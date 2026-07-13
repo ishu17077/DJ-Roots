@@ -329,9 +329,56 @@ const Info = (p) => <Icon name="Info" {...p} />;
 const AlertCircle = (p) => <Icon name="AlertCircle" {...p} />;
 
 const TRENDING_POOL = [
-  { id: 't1', title: 'Bella Ciao', artist: 'Money Heist', duration: 143, bpm: 120, key: 'A Min', pitch: 220, source: 'youtube', youtubeVideoId: '0aUav1lx3rA', img: 'https://img.youtube.com/vi/0aUav1lx3rA/mqdefault.jpg' },
-  { id: 't3', title: 'Rasputin', artist: 'Boney M', duration: 283, bpm: 126, key: 'B Min', pitch: 250, source: 'youtube', youtubeVideoId: 'x5Oag4hISgU', img: 'https://img.youtube.com/vi/x5Oag4hISgU/mqdefault.jpg' },
-  { id: 't2', title: 'Vaari Jaavan', artist: 'Jyoti Nooran', duration: 210, bpm: 115, key: 'D Min', pitch: 240, source: 'youtube', youtubeVideoId: 'SJ73cJXbPhE', img: 'https://img.youtube.com/vi/SJ73cJXbPhE/mqdefault.jpg' }
+  { id: 't0', title: 'Shape of You', artist: 'Ed Sheeran', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'JGwWNGJdvx8', img: 'https://img.youtube.com/vi/JGwWNGJdvx8/mqdefault.jpg' },
+  { id: 't1', title: 'Blinding Lights', artist: 'The Weeknd', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: '4NRXx6U8ABQ', img: 'https://img.youtube.com/vi/4NRXx6U8ABQ/mqdefault.jpg' },
+  { id: 't2', title: 'As It Was', artist: 'Harry Styles', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'H5v3kku4y6Q', img: 'https://img.youtube.com/vi/H5v3kku4y6Q/mqdefault.jpg' },
+  { id: 't3', title: 'Watermelon Sugar', artist: 'Harry Styles', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'E07s5ZYygMg', img: 'https://img.youtube.com/vi/E07s5ZYygMg/mqdefault.jpg' },
+  { id: 't4', title: 'Levitating', artist: 'Dua Lipa', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'TUVcZfQe-Kw', img: 'https://img.youtube.com/vi/TUVcZfQe-Kw/mqdefault.jpg' },
+  { id: 't5', title: 'Espresso', artist: 'Sabrina Carpenter', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'eVli-tstM5E', img: 'https://img.youtube.com/vi/eVli-tstM5E/mqdefault.jpg' },
+  { id: 't6', title: 'Cruel Summer', artist: 'Taylor Swift', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'ic8j13piAhQ', img: 'https://img.youtube.com/vi/ic8j13piAhQ/mqdefault.jpg' },
+  { id: 't7', title: 'Water', artist: 'Tyla', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'X6e6qBqHj1I', img: 'https://img.youtube.com/vi/X6e6qBqHj1I/mqdefault.jpg' },
+  { id: 't8', title: 'Greedy', artist: 'Tate McRae', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'z-jO6eH8H0s', img: 'https://img.youtube.com/vi/z-jO6eH8H0s/mqdefault.jpg' },
+  { id: 't9', title: 'Paint The Town Red', artist: 'Doja Cat', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'm4_9TFeMfJE', img: 'https://img.youtube.com/vi/m4_9TFeMfJE/mqdefault.jpg' },
+  { id: 't10', title: 'Vampire', artist: 'Olivia Rodrigo', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'RlPNh_PBZb4', img: 'https://img.youtube.com/vi/RlPNh_PBZb4/mqdefault.jpg' },
+  { id: 't11', title: 'Anti-Hero', artist: 'Taylor Swift', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'b1kbLwvqugk', img: 'https://img.youtube.com/vi/b1kbLwvqugk/mqdefault.jpg' },
+  { id: 't12', title: 'Flowers', artist: 'Miley Cyrus', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'G7KNmW9a75Y', img: 'https://img.youtube.com/vi/G7KNmW9a75Y/mqdefault.jpg' },
+  { id: 't13', title: 'Kill Bill', artist: 'SZA', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'SQnc1QibapQ', img: 'https://img.youtube.com/vi/SQnc1QibapQ/mqdefault.jpg' },
+  { id: 't14', title: 'Calm Down', artist: 'Rema & Selena Gomez', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'WcIcVapfqXw', img: 'https://img.youtube.com/vi/WcIcVapfqXw/mqdefault.jpg' },
+  { id: 't15', title: 'Chaleya', artist: 'Arijit Singh, Shilpa Rao', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'VAdGW7QDJiU', img: 'https://img.youtube.com/vi/VAdGW7QDJiU/mqdefault.jpg' },
+  { id: 't16', title: 'Tum Kya Mile', artist: 'Arijit Singh, Shreya Ghoshal', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'l9MEmz1K80c', img: 'https://img.youtube.com/vi/l9MEmz1K80c/mqdefault.jpg' },
+  { id: 't17', title: 'Kesariya', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'BddP6PYo2gs', img: 'https://img.youtube.com/vi/BddP6PYo2gs/mqdefault.jpg' },
+  { id: 't18', title: 'O Maahi', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'j80tL2j_x7c', img: 'https://img.youtube.com/vi/j80tL2j_x7c/mqdefault.jpg' },
+  { id: 't19', title: 'Heeriye', artist: 'Arijit Singh, Jasleen Royal', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'RLzC55ai0eo', img: 'https://img.youtube.com/vi/RLzC55ai0eo/mqdefault.jpg' },
+  { id: 't20', title: 'Jhoome Jo Pathaan', artist: 'Arijit Singh, Sukriti Kakar', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'YxWlaYCA8MU', img: 'https://img.youtube.com/vi/YxWlaYCA8MU/mqdefault.jpg' },
+  { id: 't21', title: 'Apna Bana Le', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'ElZfdU54Cp8', img: 'https://img.youtube.com/vi/ElZfdU54Cp8/mqdefault.jpg' },
+  { id: 't22', title: 'Manike', artist: 'Yohani, Jubin Nautiyal', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'aNppEFEiXz0', img: 'https://img.youtube.com/vi/aNppEFEiXz0/mqdefault.jpg' },
+  { id: 't23', title: 'Raataan Lambiyan', artist: 'Jubin Nautiyal, Asees Kaur', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'gvyUuxdRdR4', img: 'https://img.youtube.com/vi/gvyUuxdRdR4/mqdefault.jpg' },
+  { id: 't24', title: 'Tum Hi Ho', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'Umqb9KENgmk', img: 'https://img.youtube.com/vi/Umqb9KENgmk/mqdefault.jpg' },
+  { id: 't25', title: 'Channa Mereya', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'bzSTpdcs-EI', img: 'https://img.youtube.com/vi/bzSTpdcs-EI/mqdefault.jpg' },
+  { id: 't26', title: 'Tere Hawaale', artist: 'Arijit Singh, Shilpa Rao', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'KUpwupYj_tY', img: 'https://img.youtube.com/vi/KUpwupYj_tY/mqdefault.jpg' },
+  { id: 't27', title: 'Tu Jhoothi Main Makkaar', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'CW5-F4gZgWc', img: 'https://img.youtube.com/vi/CW5-F4gZgWc/mqdefault.jpg' },
+  { id: 't28', title: 'Malang Sajna', artist: 'Sachet Tandon, Parampara Tandon', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'L8E_6GjE1gI', img: 'https://img.youtube.com/vi/L8E_6GjE1gI/mqdefault.jpg' },
+  { id: 't29', title: 'Pyaar Hota Kayi Baar Hai', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'c2eW4P9Q8-8', img: 'https://img.youtube.com/vi/c2eW4P9Q8-8/mqdefault.jpg' },
+  { id: 't30', title: 'Besharam Rang', artist: 'Shilpa Rao, Caralisa Monteiro', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'huxhqphtzWA', img: 'https://img.youtube.com/vi/huxhqphtzWA/mqdefault.jpg' },
+  { id: 't31', title: 'Maan Meri Jaan', artist: 'King', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'VuG7gePnqF0', img: 'https://img.youtube.com/vi/VuG7gePnqF0/mqdefault.jpg' },
+  { id: 't32', title: 'Kahani Suno 2.0', artist: 'Kaifi Khalil', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: '_XBVWlI8TsQ', img: 'https://img.youtube.com/vi/_XBVWlI8TsQ/mqdefault.jpg' },
+  { id: 't33', title: 'Phir Aur Kya Chahiye', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: '8sLS2knUa6Y', img: 'https://img.youtube.com/vi/8sLS2knUa6Y/mqdefault.jpg' },
+  { id: 't34', title: 'Satranga', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: '1zK8o0hP24g', img: 'https://img.youtube.com/vi/1zK8o0hP24g/mqdefault.jpg' },
+  { id: 't35', title: 'Tumi Jake Bhalobasho', artist: 'Iman Chakraborty', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'jF_0L7_pE5g', img: 'https://img.youtube.com/vi/jF_0L7_pE5g/mqdefault.jpg' },
+  { id: 't36', title: 'Keno Je Toke', artist: 'Raj Barman', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'a_n9rEa4-6k', img: 'https://img.youtube.com/vi/a_n9rEa4-6k/mqdefault.jpg' },
+  { id: 't37', title: 'Bojhena Shey Bojhena', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'dD5nQOqjH0M', img: 'https://img.youtube.com/vi/dD5nQOqjH0M/mqdefault.jpg' },
+  { id: 't38', title: 'Ami Je Ke Tomar', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'W_aXk5pQo8c', img: 'https://img.youtube.com/vi/W_aXk5pQo8c/mqdefault.jpg' },
+  { id: 't39', title: 'Tor Eto Bhab', artist: 'Shreya Ghoshal', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'QdG8m_H4-Qk', img: 'https://img.youtube.com/vi/QdG8m_H4-Qk/mqdefault.jpg' },
+  { id: 't40', title: 'Kichu Kichu Kotha', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'o7kPZgC29-Q', img: 'https://img.youtube.com/vi/o7kPZgC29-Q/mqdefault.jpg' },
+  { id: 't41', title: 'E Tumi Kemon Tumi', artist: 'Rupankar Bagchi', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'Kz1_H9i0u6I', img: 'https://img.youtube.com/vi/Kz1_H9i0u6I/mqdefault.jpg' },
+  { id: 't42', title: 'O Mon Re', artist: 'Minar Rahman', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'xS-Kj5eY6M4', img: 'https://img.youtube.com/vi/xS-Kj5eY6M4/mqdefault.jpg' },
+  { id: 't43', title: 'Bawshonto Eshe Geche', artist: 'Lagnajita Chakraborty', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'N1B9d-8R5s0', img: 'https://img.youtube.com/vi/N1B9d-8R5s0/mqdefault.jpg' },
+  { id: 't44', title: 'Tomake Chuye Dilam', artist: 'Arijit Singh', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'e28v_wB4G8g', img: 'https://img.youtube.com/vi/e28v_wB4G8g/mqdefault.jpg' },
+  { id: 't45', title: 'Ekla Cholo Re', artist: 'Kishore Kumar', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'Oq-s6X7A6Vw', img: 'https://img.youtube.com/vi/Oq-s6X7A6Vw/mqdefault.jpg' },
+  { id: 't46', title: 'Ghawr', artist: 'Lagnajita Chakraborty', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'B-d3x0e0h3E', img: 'https://img.youtube.com/vi/B-d3x0e0h3E/mqdefault.jpg' },
+  { id: 't47', title: 'Rupkothar Jogote', artist: 'Tahsan', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: '5Z1W5P7j8R8', img: 'https://img.youtube.com/vi/5Z1W5P7j8R8/mqdefault.jpg' },
+  { id: 't48', title: 'Jani Na', artist: 'Anupam Roy', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'Fz7_8K2W8E4', img: 'https://img.youtube.com/vi/Fz7_8K2W8E4/mqdefault.jpg' },
+  { id: 't49', title: 'Dhrubotara', artist: 'Tanjib Sarowar', duration: 180, bpm: 120, key: 'G Min', pitch: 260, source: 'youtube', youtubeVideoId: 'G1p1n7t4p8o', img: 'https://img.youtube.com/vi/G1p1n7t4p8o/mqdefault.jpg' }
 ];
 
 // Hardcoded fallback data for offline mode
@@ -759,41 +806,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
 
   const [trendingPool, setTrendingPool] = useState(TRENDING_POOL);
 
-  useEffect(() => {
-    const fetchTrending = async () => {
-      try {
-        // Search for dynamic official music videos while excluding common compilation keywords
-        const query = 'music -mix -compilation -playlist -full -album';
-        const results = await searchYouTube(query);
 
-        if (results && results.length > 0) {
-          // Filter out results that are obviously compilations based on title or excessive duration
-          const individualSongs = results.filter(song => {
-            const lowerTitle = song.title.toLowerCase();
-            const isCompilation = lowerTitle.includes('mix') ||
-              lowerTitle.includes('compilation') ||
-              lowerTitle.includes('top 50') ||
-              lowerTitle.includes('top 100') ||
-              lowerTitle.includes('playlist') ||
-              lowerTitle.includes('album') ||
-              lowerTitle.includes('hits of');
-
-            // If duration is provided (and not the fallback 180s), filter out videos > 7 minutes
-            const isTooLong = song.duration > 420 && song.duration !== 180;
-
-            return !isCompilation && !isTooLong;
-          });
-
-          if (individualSongs.length > 0) {
-            setTrendingPool(individualSongs.slice(0, 6)); // Show top 6
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch dynamic trending songs from YouTube, using fallback', err);
-      }
-    };
-    fetchTrending();
-  }, []);
 
   const filteredTrending = useMemo(() => {
     return trendingPool.filter(song =>
@@ -1776,7 +1789,8 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
 
                 </nav>
 
-                {/* Thin Hype Mode Card */}
+
+                {/*          
                 <div onClick={triggerHypeMode} className="bg-gradient-to-br from-indigo-950/20 to-violet-950/15 border border-violet-900/30 p-3.5 rounded-xl cursor-pointer hover:border-violet-500/40 transition-all group relative overflow-hidden">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -1792,8 +1806,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
                       <div className={`w-2.5 h-2.5 rounded-full bg-zinc-500 absolute top-0.5 transition-all ${hypeModeOn ? 'left-[14px] bg-white' : 'left-0.5'}`} />
                     </div>
                   </div>
-                </div>
-
+                </div> */}
                 {/* Offline Connect Widget (Sidebar) */}
                 {!activeRoomCode && (
                   <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4">
@@ -2013,6 +2026,12 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
                 queueList={queueList}
                 toggleShuffle={toggleShuffle}
                 activeRoomCode={activeRoomCode}
+                roomId={supabaseRoom?.id || null}
+                userProfile={userProfile}
+                canControlPlayback={canControlPlayback}
+                onAddSong={addSongFromPool}
+                onPlaySong={playSongFromPool}
+                sendReaction={sendReaction}
               />
             ) : null
           }
@@ -2047,7 +2066,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
           {
             activeView === 'people' ? (
               <PeopleSection
-                currentTrack={currentTrack}
+                currentTrack={currentTrack} g
                 audioElapsedSeconds={audioElapsedSeconds}
                 formatTime={formatTime}
                 waveformBars={waveformBars}

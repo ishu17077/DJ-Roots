@@ -215,6 +215,23 @@ export async function fetchPublicRooms() {
     return [];
   }
   
+  // Fetch current tracks for these rooms
+  const trackIds = data.map(r => r.current_track_id).filter(Boolean);
+  let tracksMap = {};
+  
+  if (trackIds.length > 0) {
+    const { data: tracksData } = await supabase
+      .from('queue_items')
+      .select('id, song:songs(title, artist, img_url)')
+      .in('id', trackIds);
+      
+    if (tracksData) {
+      tracksData.forEach(t => {
+        tracksMap[t.id] = t;
+      });
+    }
+  }
+
   // Sort by member count descending and extract host
   const roomsWithCount = data.map(room => {
     // Try to find the host from members
@@ -222,7 +239,8 @@ export async function fetchPublicRooms() {
     return {
       ...room,
       host: hostMember?.profile || { name: 'DJ', avatar_url: null },
-      memberCount: room.members ? room.members.length : 0
+      memberCount: room.members ? room.members.length : 0,
+      currentTrack: room.current_track_id ? tracksMap[room.current_track_id]?.song : null
     };
   }).sort((a, b) => b.memberCount - a.memberCount);
   
