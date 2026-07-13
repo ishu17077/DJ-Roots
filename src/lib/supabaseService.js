@@ -292,16 +292,18 @@ export async function addSongToQueue(roomId, songData, addedByProfileId) {
 
   // ── Step 2: If migration 004 has been run, enrich with YouTube fields ───────
   if (songData.youtubeVideoId && song.id) {
-    supabase
-      .from('songs')
-      .update({
-        source: 'youtube',
-        youtube_video_id: songData.youtubeVideoId,
-        embed_url: songData.embedUrl || null,
-      })
-      .eq('id', song.id)
-      .then(() => {}) // fire-and-forget; ignore error if columns don't exist yet
-      .catch(() => {});
+    try {
+      await supabase
+        .from('songs')
+        .update({
+          source: 'youtube',
+          youtube_video_id: songData.youtubeVideoId,
+          embed_url: songData.embedUrl || null,
+        })
+        .eq('id', song.id);
+    } catch (e) {
+      console.warn('Silent fail updating youtube fields:', e);
+    }
   }
 
   // ── Step 3: Check if already in the queue (to upvote instead of double-add) ─

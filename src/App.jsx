@@ -1066,7 +1066,9 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
         key: song.key,
         addedBy: userProfile?.name || 'Guest',
         img: song.img,
-        userAvatar: displayAvatar
+        userAvatar: displayAvatar,
+        youtubeVideoId: song.youtubeVideoId,
+        source: song.source
       };
       const dbItem = await supabaseAddSong(song);
       if (dbItem && dbItem.id) {
@@ -1095,7 +1097,9 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       key: song.key,
       addedBy: userProfile?.name || 'Guest',
       img: song.img,
-      userAvatar: displayAvatar
+      userAvatar: displayAvatar,
+      youtubeVideoId: song.youtubeVideoId,
+      source: song.source
     };
 
     setQueueList(prev => [...prev, newSong]);
