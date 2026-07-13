@@ -58,7 +58,7 @@ export default function PublicDJSection({
                 
                 {/* Host Badge */}
                 <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md rounded-lg p-1.5 flex items-center gap-2 border border-white/5">
-                  <img src={room.host?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="DJ Avatar" className="w-6 h-6 rounded-md object-cover" />
+                  <img src={room.host?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="DJ Avatar" referrerPolicy="no-referrer" className="w-6 h-6 rounded-md object-cover" />
                   <span className="text-[10px] font-bold text-white mr-1">{room.host?.name || 'DJ'}</span>
                 </div>
 

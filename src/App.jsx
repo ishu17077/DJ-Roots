@@ -1765,7 +1765,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
                 </div>
                 <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
               </div>
-              <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
+              <img src={displayAvatar} alt="Avatar" referrerPolicy="no-referrer" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
             </div>
           </div>
         </header>
@@ -1874,25 +1874,32 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
               <div className="mt-auto space-y-3">
                 {/* Current DJ Summary - Only show if activeRoomCode exists */}
                 {activeRoomCode && (
-                  <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
-                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
-                    <div className="flex items-center gap-2.5">
-                      <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>
-                          <Crown className="w-3 h-3 text-amber-400" />
+                  (() => {
+                    const djMember = (supabaseMembers || []).find(m => m.profileId === supabaseRoom?.host_id);
+                    const djName = djMember?.name || (isCurrentDJ ? (userProfile?.name || 'Guest') : 'DJ');
+                    const djAvatar = djMember?.avatar || (isCurrentDJ ? displayAvatar : 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80');
+                    return (
+                      <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
+                        <div className="flex items-center gap-2.5">
+                          <img src={djAvatar} alt="Avatar" referrerPolicy="no-referrer" className="w-8 h-8 rounded-lg object-cover" />
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs font-semibold text-white">{djName}</span>
+                              <Crown className="w-3 h-3 text-amber-400" />
+                            </div>
+                          </div>
                         </div>
+                        {isHost && (
+                          <div className="flex gap-1 mt-1">
+                            <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
+                              Change
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {isHost && (
-                      <div className="flex gap-1 mt-1">
-                        <button onClick={requestNewDJ} className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-[9px] font-bold py-1.5 rounded-lg text-zinc-300 transition-all">
-                          Change
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    );
+                  })()
                 )}
 
                 {/* Leave Room - Only show if activeRoomCode exists */}
@@ -2246,7 +2253,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
                   return (
                     <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/40 hover:bg-zinc-900 border border-zinc-800 transition-all">
                       <div className="flex items-center gap-3">
-                        <img src={member.avatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                        <img src={member.avatar} alt="Avatar" referrerPolicy="no-referrer" className="w-8 h-8 rounded-lg object-cover" />
                         <div>
                           <div className="text-xs font-bold text-white">{member.name}</div>
                           <div className="text-[10px] text-zinc-500">{member.role}</div>

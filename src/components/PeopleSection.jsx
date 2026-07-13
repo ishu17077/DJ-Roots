@@ -85,7 +85,7 @@ export default function PeopleSection({
                   className="grid grid-cols-12 items-center p-3 rounded-xl border border-transparent bg-zinc-900/10 hover:border-zinc-850 hover:bg-zinc-900/20 transition-all cursor-default"
                 >
                   <div className="col-span-4 flex items-center gap-3.5 min-w-0">
-                    <img src={person.avatar} alt={person.name} className="w-9 h-9 rounded-lg object-cover ring-2 ring-violet-500/10 shrink-0" />
+                    <img src={person.avatar} alt={person.name} referrerPolicy="no-referrer" className="w-9 h-9 rounded-lg object-cover ring-2 ring-violet-500/10 shrink-0" />
                     <div className="min-w-0">
                       <span className="text-xs font-bold text-white flex items-center gap-1 leading-tight">
                         {person.name}
