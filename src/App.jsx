@@ -13,7 +13,7 @@ import ClickSpark from './components/ClickSpark.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 import { useReactions } from './lib/useReactions.js';
 import { supabase } from './lib/supabase.js';
-import { createRoom, joinRoomByCode } from './lib/supabaseService.js';
+import { createRoom, joinRoomByCode, fetchPublicRooms } from './lib/supabaseService.js';
 import { isValidYouTubeUrl, createSongFromYouTube, extractVideoId, searchYouTube } from './lib/youtubeService.js';
 import FloatingReactionContainer from './components/FloatingReactionContainer.jsx';
 import ReactionBar from './components/ReactionBar.jsx';
@@ -414,24 +414,32 @@ export default function App() {
 
   // Go straight to the dashboard — room join/create is handled inside
   const authDisplayName = authUser.user_metadata?.display_name || authUser.email?.split('@')[0] || 'Guest';
-  return <DJRootsApp authUser={authUser} authDisplayName={authDisplayName} onLogout={handleLogout} />;
+  const authAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
+  return <DJRootsApp authUser={authUser} authDisplayName={authDisplayName} authAvatar={authAvatar} onLogout={handleLogout} />;
 }
 
-function DJRootsApp({ authUser, authDisplayName, onLogout }) {
+function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
   // --- ROOM STATE (persisted to localStorage) ---
   const [activeRoomCode, setActiveRoomCode] = useState(() => {
     try { return localStorage.getItem('djroots_room_code') || null; } catch { return null; }
   });
-  const [userProfile, setUserProfile] = useState(() => {
+  const [rawUserProfile, setRawUserProfile] = useState(() => {
     try {
       const saved = localStorage.getItem('djroots_user_profile');
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
 
+  const userProfile = useMemo(() => {
+    if (!rawUserProfile) return null;
+    return { ...rawUserProfile, avatar_url: authAvatar || rawUserProfile.avatar_url };
+  }, [rawUserProfile, authAvatar]);
+
+  const displayAvatar = authAvatar || userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80';
+
   const handleJoinRoom = (code, profile) => {
     setActiveRoomCode(code);
-    setUserProfile(profile);
+    setRawUserProfile(profile);
     setConnectMode(null); // Close widget upon success
     try {
       localStorage.setItem('djroots_room_code', code);
@@ -443,15 +451,27 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
   const [connectMode, setConnectMode] = useState(null); // null | 'create' | 'join'
   const [connectName, setConnectName] = useState(authDisplayName || '');
   const [connectRoomCode, setConnectRoomCode] = useState('');
+  const [connectIsPublic, setConnectIsPublic] = useState(true);
+  const [publicRooms, setPublicRooms] = useState([]);
   const [connectLoading, setConnectLoading] = useState(false);
   const [connectError, setConnectError] = useState('');
+
+  useEffect(() => {
+    if (!activeRoomCode) {
+      fetchPublicRooms().then(rooms => setPublicRooms(rooms || []));
+      const interval = setInterval(() => {
+         fetchPublicRooms().then(rooms => setPublicRooms(rooms || []));
+      }, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [activeRoomCode]);
 
   const executeCreateRoom = async (e) => {
     e.preventDefault();
     if (!connectName.trim()) { setConnectError('Please enter your name'); return; }
     setConnectLoading(true); setConnectError('');
     try {
-      const result = await createRoom(connectName.trim());
+      const result = await createRoom(connectName.trim(), connectIsPublic);
       if (result) handleJoinRoom(result.room.code, result.profile);
       else setConnectError('Failed to create room.');
     } catch (err) { setConnectError('Connection error.'); }
@@ -473,7 +493,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
 
   const handleLeaveRoom = () => {
     setActiveRoomCode(null);
-    setUserProfile(null);
+    setRawUserProfile(null);
     try {
       localStorage.removeItem('djroots_room_code');
       localStorage.removeItem('djroots_user_profile');
@@ -976,7 +996,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         key: song.key,
         addedBy: userProfile?.name || 'Guest',
         img: song.img,
-        userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
+        userAvatar: displayAvatar
       };
       setQueueList(prev => [...prev, newSong]);
       addToast('Track Queued', `"${song.title}" added to the active crowd list.`);
@@ -1001,7 +1021,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       key: song.key,
       addedBy: userProfile?.name || 'Guest',
       img: song.img,
-      userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
+      userAvatar: displayAvatar
     };
 
     setQueueList(prev => [...prev, newSong]);
@@ -1032,7 +1052,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
         key: song.key,
         addedBy: userProfile?.name || 'Guest',
         img: song.img,
-        userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80',
+        userAvatar: displayAvatar,
         youtubeVideoId: song.youtubeVideoId,
         source: song.source
       };
@@ -1076,7 +1096,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       addToast('Processing...', 'Fetching video information from YouTube...');
 
       const videoId = extractVideoId(url);
-      const song = await createSongFromYouTube(videoId, userProfile?.name || 'Guest');
+      const song = await createSongFromYouTube(videoId, userProfile?.name || 'Guest', displayAvatar);
 
       if (supabaseConnected) {
         supabaseAddSong(song);
@@ -1367,7 +1387,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
       key: 'G Min',
       addedBy: userProfile?.name || 'Guest',
       img: covers[Math.floor(Math.random() * covers.length)],
-      userAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'
+      userAvatar: displayAvatar
     };
 
     if (supabaseConnected) {
@@ -1674,7 +1694,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
               </div>
               <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold uppercase border border-emerald-500/15">SUPER DJ</span>
             </div>
-            <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
+            <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover ring-2 ring-violet-500/20" />
           </div>
         </div>
       </header>
@@ -1754,6 +1774,12 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                       {connectMode === 'join' && (
                         <input type="text" value={connectRoomCode} onChange={e => setConnectRoomCode(e.target.value.toUpperCase())} placeholder="Code" className="bg-[#08080f] border border-zinc-800 rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500/60 w-full uppercase" />
                       )}
+                      {connectMode === 'create' && (
+                        <label className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1 mb-1 cursor-pointer">
+                          <input type="checkbox" checked={connectIsPublic} onChange={e => setConnectIsPublic(e.target.checked)} className="rounded border-zinc-700 bg-[#08080f] text-violet-600 focus:ring-violet-500/30" />
+                          Make room public
+                        </label>
+                      )}
                       {connectError && <div className="text-[9px] text-red-400">{connectError}</div>}
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setConnectMode(null)} className="flex-1 text-[9px] text-zinc-500 hover:text-white uppercase font-bold tracking-wider">Back</button>
@@ -1765,6 +1791,43 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                   )}
                 </div>
               )}
+
+              {/* Public Rooms List */}
+              {!activeRoomCode && (
+                <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4 space-y-3">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Live Public Rooms</span>
+                  {publicRooms.length > 0 ? (
+                    <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                      {publicRooms.map(r => (
+                        <div key={r.id} className="flex items-center justify-between bg-[#08080f] border border-zinc-800 p-2 rounded-lg group hover:border-violet-500/50 transition-colors">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <img src={r.host?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="DJ Avatar" className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold text-white truncate">{r.name}</p>
+                              <p className="text-[9px] text-zinc-500 truncate">{r.host?.name || 'DJ'} • {r.memberCount} members</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setConnectName(authDisplayName || '');
+                              setConnectRoomCode(r.code);
+                              setConnectMode('join');
+                            }} 
+                            className="bg-violet-600/20 hover:bg-violet-600 text-violet-300 hover:text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                          >
+                            Join
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 bg-[#08080f] border border-zinc-800 rounded-lg">
+                      <p className="text-[10px] text-zinc-500">No public rooms yet.</p>
+                      <p className="text-[9px] text-zinc-600 mt-1">Start a room to broadcast here!</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-auto space-y-3">
@@ -1773,7 +1836,7 @@ function DJRootsApp({ authUser, authDisplayName, onLogout }) {
                 <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl space-y-3">
                   <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Current DJ</span>
                   <div className="flex items-center gap-2.5">
-                    <img src={userProfile?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80'} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
+                    <img src={displayAvatar} alt="Avatar" className="w-8 h-8 rounded-lg object-cover" />
                     <div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-semibold text-white">{userProfile?.name || 'Guest'}</span>

@@ -22,9 +22,9 @@ export default function ParticleAirpods() {
     const generateParticles = (count, sizeMin, sizeMax, speedMult, opacityBase, type) => {
       for (let i = 0; i < count; i++) {
         // Use a power function to bias the distribution towards the inner radius (1.0)
-        const distribution = Math.pow(Math.random(), 3); 
+        const distribution = Math.pow(Math.random(), 3);
         const normRadius = 1.0 + distribution * 1.8; // Ranges from 1.0 to 2.8
-        
+
         particles.push({
           angle: Math.random() * Math.PI * 2,
           normRadius: normRadius,
@@ -63,7 +63,7 @@ export default function ParticleAirpods() {
       // Lock center exactly to the middle of the canvas (removed mouse parallax)
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      
+
       // Calculate responsive inner radius based on screen size
       const innerRadius = Math.min(canvas.width, canvas.height) * 0.20;
 
@@ -72,7 +72,7 @@ export default function ParticleAirpods() {
       particles.forEach((p) => {
         // Update physics
         p.angle += p.speed;
-        
+
         // Add a gentle wobble to the radius
         const wobble = Math.sin(time * p.wobbleSpeed + p.wobblePhase) * (p.type === 'bokeh' ? 20 : 5);
         const actualRadius = (innerRadius * p.normRadius) + wobble;
@@ -82,10 +82,10 @@ export default function ParticleAirpods() {
 
         // Twinkle effect
         const twinkle = 0.7 + 0.3 * Math.sin(time * 0.003 + p.wobblePhase);
-        
+
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
-        
+
         if (p.type === 'bokeh') {
           // Large blurred particles
           const gradient = ctx.createRadialGradient(x, y, 0, x, y, p.size);
@@ -93,7 +93,7 @@ export default function ParticleAirpods() {
           let r = 255, g = 255, b = 255;
           if (p.color === '#ec4899') { r = 236; g = 72; b = 153; }
           else if (p.color === '#a855f7') { r = 168; g = 85; b = 247; }
-          
+
           gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${p.opacity * twinkle})`);
           gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
           ctx.fillStyle = gradient;
@@ -104,7 +104,7 @@ export default function ParticleAirpods() {
           else if (p.color === '#a855f7') { r = 168; g = 85; b = 247; }
           ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.opacity * twinkle})`;
         }
-        
+
         ctx.fill();
       });
 
@@ -122,19 +122,19 @@ export default function ParticleAirpods() {
 
   return (
     <div ref={containerRef} className="w-full h-full relative flex items-center justify-center">
-      
+
       {/* Particle Canvas */}
-      <canvas 
-        ref={canvasRef} 
+      <canvas
+        ref={canvasRef}
         className="absolute inset-0 w-full h-full z-0 pointer-events-none"
       />
 
       {/* Center Image */}
-      <div className="z-10 relative pointer-events-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] w-[250px] h-[250px] lg:w-[400px] lg:h-[400px]">
-        <img 
-          src="/airpods.png" 
-          alt="AirPods" 
-          className="w-full h-full object-contain"
+      <div className="z-10 relative pointer-events-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] w-[250px] h-[250px] lg:w-[250px] lg:h-[250px]">
+        <img
+          src="/logo.png"
+          alt="DJ Roots"
+          className="w-full h-full object-contain center"
         />
       </div>
 
