@@ -10,6 +10,7 @@ import LobbyScreen from './components/LobbyScreen.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import ClickSpark from './components/ClickSpark.jsx';
+import PublicDJSection from './components/PublicDJSection.jsx';
 import { useSupabaseRoom } from './lib/useSupabaseRoom.js';
 import { useReactions } from './lib/useReactions.js';
 import { supabase } from './lib/supabase.js';
@@ -492,6 +493,25 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
       localStorage.setItem('djroots_room_code', code);
       localStorage.setItem('djroots_user_profile', JSON.stringify(profile));
     } catch (e) { console.warn('localStorage save failed:', e); }
+  };
+
+  const handleDirectJoinRoom = async (code) => {
+    const nameToUse = authDisplayName || 'Guest';
+    setConnectLoading(true);
+    try {
+      const result = await joinRoomByCode(code, nameToUse);
+      if (result) {
+        handleJoinRoom(result.room.code, result.profile);
+        addToast('Connected', `Joined room ${code}`, true);
+        setActiveView('home');
+      } else {
+        addToast('Error', 'Room not found.', false);
+      }
+    } catch (err) {
+      addToast('Error', 'Connection error.', false);
+    } finally {
+      setConnectLoading(false);
+    }
   };
 
   // --- OFFLINE ROOM CONNECT STATE ---
@@ -1786,6 +1806,11 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
                     <span style={{ fontSize: '1rem', lineHeight: 1 }}>💬</span>
                     <span>Live Chat</span>
                   </button>
+                  {!activeRoomCode && (
+                    <button onClick={() => { setActiveView('public-dj'); addToast('Public DJ', 'Browsing live public rooms.'); }} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left w-full ${activeView === 'public-dj' ? 'bg-violet-600/10 text-violet-400 border-violet-500/20' : 'text-zinc-400 border-transparent hover:text-white hover:bg-zinc-900/50'}`}>
+                      <Radio className={`w-4 h-4 ${activeView === 'public-dj' ? 'text-violet-400' : ''}`} /> Public DJ
+                    </button>
+                  )}
 
                 </nav>
 
@@ -1843,42 +1868,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
                   </div>
                 )}
 
-                {/* Public Rooms List */}
-                {!activeRoomCode && (
-                  <div className="bg-zinc-900/40 border border-violet-900/30 p-3 rounded-xl mt-4 space-y-3">
-                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Live Public Rooms</span>
-                    {publicRooms.length > 0 ? (
-                      <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                        {publicRooms.map(r => (
-                          <div key={r.id} className="flex items-center justify-between bg-[#08080f] border border-zinc-800 p-2 rounded-lg group hover:border-violet-500/50 transition-colors">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <img src={r.host?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=80&q=80'} alt="DJ Avatar" className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-white truncate">{r.name}</p>
-                                <p className="text-[9px] text-zinc-500 truncate">{r.host?.name || 'DJ'} • {r.memberCount} members</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setConnectName(authDisplayName || '');
-                                setConnectRoomCode(r.code);
-                                setConnectMode('join');
-                              }}
-                              className="bg-violet-600/20 hover:bg-violet-600 text-violet-300 hover:text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
-                            >
-                              Join
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 bg-[#08080f] border border-zinc-800 rounded-lg">
-                        <p className="text-[10px] text-zinc-500">No public rooms yet.</p>
-                        <p className="text-[9px] text-zinc-600 mt-1">Start a room to broadcast here!</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+
               </div>
 
               <div className="mt-auto space-y-3">
@@ -2099,6 +2089,15 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
               onPlaySong={playSongFromPool}
             />
           </div>
+
+          {
+            activeView === 'public-dj' ? (
+              <PublicDJSection
+                publicRooms={publicRooms}
+                onJoinRoom={handleDirectJoinRoom}
+              />
+            ) : null
+          }
 
         </div >
 
