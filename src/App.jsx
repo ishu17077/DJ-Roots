@@ -1355,6 +1355,7 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
   const simulateGestureRef = useRef(null);
 
   // --- AI GESTURE PREDICTION LOOP ---
+  const lastProcessTimeRef = useRef(0);
   useEffect(() => {
     if (webcamActive && videoRef.current) {
       const predictWebcam = () => {
@@ -1364,29 +1365,33 @@ function DJRootsApp({ authUser, authDisplayName, authAvatar, onLogout }) {
         }
         if (videoRef.current.readyState >= 2) {
           const nowInMs = Date.now();
-          let results;
-          try { results = recognizerRef.current.recognizeForVideo(videoRef.current, nowInMs); }
-          catch (e) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
+          // Throttle to 10 FPS (100ms) to prevent Chrome OOM crashes
+          if (nowInMs - lastProcessTimeRef.current >= 100) {
+            lastProcessTimeRef.current = nowInMs;
+            let results;
+            try { results = recognizerRef.current.recognizeForVideo(videoRef.current, nowInMs); }
+            catch (e) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
 
-          if (results.gestures.length > 0) {
-            const gestureName = results.gestures[0][0].categoryName;
-            const score = results.gestures[0][0].score;
-            const COOLDOWN = 1200; // ms between gestures
-            if (score > 0.72 && nowInMs - lastGestureTimeRef.current > COOLDOWN) {
-              lastGestureTimeRef.current = nowInMs;
-              const fn = simulateGestureRef.current;
-              if (!fn) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
+            if (results.gestures.length > 0) {
+              const gestureName = results.gestures[0][0].categoryName;
+              const score = results.gestures[0][0].score;
+              const COOLDOWN = 1200; // ms between gestures
+              if (score > 0.72 && nowInMs - lastGestureTimeRef.current > COOLDOWN) {
+                lastGestureTimeRef.current = nowInMs;
+                const fn = simulateGestureRef.current;
+                if (!fn) { requestRef.current = requestAnimationFrame(predictWebcam); return; }
 
-              // Standard gesture → action mapping
-              if (gestureName === 'Thumb_Up') fn('swiperight');
-              else if (gestureName === 'Thumb_Down') fn('swipeleft');
-              else if (gestureName === 'Closed_Fist') fn('fist');
-              else if (gestureName === 'Open_Palm') fn('palmup');
-              else if (gestureName === 'Pointing_Up') fn('palmdown');
-              // Victory ✌️ — skip next track, just send 🎉 reaction
-              else if (gestureName === 'Victory') sendReaction('🎉');
-              // ILoveYou 🤟 — volume up + ❤️ reaction (palmup already sends 👏 inside fn)
-              else if (gestureName === 'ILoveYou') { fn('palmup'); sendReaction('❤️'); }
+                // Standard gesture → action mapping
+                if (gestureName === 'Thumb_Up') fn('swiperight');
+                else if (gestureName === 'Thumb_Down') fn('swipeleft');
+                else if (gestureName === 'Closed_Fist') fn('fist');
+                else if (gestureName === 'Open_Palm') fn('palmup');
+                else if (gestureName === 'Pointing_Up') fn('palmdown');
+                // Victory ✌️ — skip next track, just send 🎉 reaction
+                else if (gestureName === 'Victory') sendReaction('🎉');
+                // ILoveYou 🤟 — volume up + ❤️ reaction (palmup already sends 👏 inside fn)
+                else if (gestureName === 'ILoveYou') { fn('palmup'); sendReaction('❤️'); }
+              }
             }
           }
         }
